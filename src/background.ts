@@ -88,6 +88,14 @@ chrome.runtime.onMessage.addListener(
         );
         save();
         broadcastTimers();
+        const finished = timers.find((t) => t.id === message.id);
+        chrome.storage?.local.get(['stats'], (data: any) => {
+          const stats = Array.isArray(data?.stats) ? data.stats : [];
+          if (finished) {
+            stats.push({ label: finished.label, duration: finished.duration, timestamp: Date.now() });
+            chrome.storage?.local.set({ stats });
+          }
+        });
         if (settings.enableNotifications) {
           chrome.notifications?.create(`timer-${message.id}`, {
             type: 'basic',

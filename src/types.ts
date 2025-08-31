@@ -23,3 +23,9 @@ export interface Settings {
   enableSound: boolean;
   volume: number; // 0-1
 }
+
+export interface StatRecord {
+  label: string;
+  duration: number; // minutes
+  timestamp: number; // ms since epoch
+}

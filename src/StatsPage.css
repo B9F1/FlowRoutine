@@ -1,0 +1,26 @@
+.stats-page {
+  padding: 16px;
+  font-family: sans-serif;
+}
+.chart .bar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.chart .label {
+  width: 80px;
+}
+.bar-bg {
+  flex: 1;
+  background: #eee;
+  height: 16px;
+  margin: 0 8px;
+}
+.bar-fill {
+  height: 100%;
+  background: #3498db;
+}
+.bar .value {
+  width: 60px;
+  text-align: right;
+}

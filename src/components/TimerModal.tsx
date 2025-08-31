@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './TimerModal.css';
 import type { Timer, Settings, TimerType } from '../types';
+declare const chrome: any;
 
 interface Props {
   timers: Timer[];
@@ -94,6 +95,16 @@ export default function TimerModal({
             onClick={() => setActiveTab('settings')}
           >
             설정
+          </button>
+          <button
+            className="tab"
+            onClick={() =>
+              chrome.tabs.create({
+                url: chrome.runtime.getURL('statistics.html'),
+              })
+            }
+          >
+            통계 보기
           </button>
         </nav>
       </header>
