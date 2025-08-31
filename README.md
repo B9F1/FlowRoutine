@@ -1,59 +1,50 @@
+
 # FlowRoutine
 
 크롬 확장툴 및 React 기반 UI 프로젝트입니다.
 
-Figma 디자인, 커스텀 폰트, 정적 파일 관리 등 최신 프론트엔드 구조를 적용합니다.
+## 주요 기능 및 진행 상황
 
----
+- 크롬 확장툴: 타이머 관리, 플로팅 타이머, 탭별 동작, 알림음(bell_01.mp3)
+- 통계 페이지: 일/주/월별 집중 시간, Chart.js 기반 막대 그래프 시각화
+- 커스텀 폰트 Pretendard 적용, 정적 리소스(public/assets) 관리
+- manifest.json, 아이콘, mp3 등 빌드 시 dist로 자동 복사
+- 개인정보 수집/외부 전송 없음 (크롬 저장소만 사용)
 
 ## 최근 변경 사항
 
-- Pretendard 폰트 전역 적용 (`pretendard.css`, `index.css`)
-- `@import` 문법 오류 해결: CSS 파일 최상단에 import 위치 조정
-- manifest.json, 아이콘 등 정적 파일이 빌드 결과물(`dist`)에 포함되도록 빌드 스크립트 개선
-- `package.json`의 build 명령어에 아래 내용 추가:
-  ```bash
-  vite build && copy manifest.json dist\ && xcopy src\assets\icons dist\assets\icons /E /I /Y
-  ```
-  - 빌드 시 manifest.json과 assets/icons 폴더가 dist로 복사됨
-- 이미지, 폰트 등 코드에서 import하지 않는 파일은 public 폴더 또는 빌드 스크립트로 dist에 복사
-- README.md에 프로젝트 구조, 실행 방법, 확장툴 등록 주의사항 등 문서화
+- 통계 페이지에 react-chartjs-2 기반 막대 그래프 적용
+- 알림음 mp3 파일(public/assets/sounds/bell_01.mp3) 적용 및 manifest에 web_accessible_resources 등록
+- 빌드 오류(경로, 중괄호 등) 및 타입 오류 수정
+- 확장툴 배포/설치 방법 및 개인정보처리방침 안내 추가
 
----
-
-## 프로젝트 구조
+## 폴더 구조
 
 ```
 FlowRoutine/
-├── hello_extensions.png
-├── hello.html
-├── LICENSE
-├── manifest.json
-├── popup.js
-├── README.md
-├── task.patch
+├── public/
+│   ├── manifest.json
+│   └── assets/
+│       ├── icons/
+│       └── sounds/
 ├── src/
 │   ├── index.css
 │   ├── index.tsx
+│   ├── components/
+│   │   └── StatsBarChart.tsx
+│   ├── StatsPage.tsx
 │   ├── assets/
 │   │   └── fonts/
 │   │       ├── pretendard.css
-│   │       ├── woff2/
-│   │       │   └── Pretendard-*.woff2
-│   │   └── images/
-│   │       └── hello_extensions.png
-│   ├── components/
-│   ├── styles/
-│   ├── contexts/
+│   │       └── woff2/
 │   ├── types/
+│   └── ...
 ├── dist/
 │   └── (빌드 결과물)
-└── .vscode/
-    └── FlowRoutine Timer Extension/
-        └── ...
+└── README.md
 ```
 
-## 실행 방법
+## 실행 및 개발
 
 1. 의존성 설치
    ```bash
@@ -70,3 +61,15 @@ FlowRoutine/
    ```
    - 빌드 결과물은 `dist/` 폴더에 생성됩니다.
    - 크롬 확장툴 등록 시, `dist` 폴더를 지정하면 됩니다.
+
+## 크롬 확장툴 배포/설치
+
+1. `dist` 폴더 전체를 zip으로 압축
+2. 크롬 웹스토어 개발자 대시보드에서 새 아이템 등록
+3. manifest.json, 아이콘, mp3 등 정적 리소스가 포함되어야 함
+4. 테스트용 설치: chrome://extensions → 개발자 모드 → "압축해제된 확장 프로그램 로드" → dist 폴더 선택
+
+## 개인정보처리방침 안내
+
+이 확장 프로그램은 어떠한 개인정보도 수집하거나 외부로 전송하지 않습니다. (크롬 저장소만 사용)
+외부 서버 연동/수집이 추가될 경우 별도 정책 페이지를 등록할 예정입니다.
