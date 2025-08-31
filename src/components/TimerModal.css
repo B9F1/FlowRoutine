@@ -1,0 +1,75 @@
+.timer-modal {
+  width: 400px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.modal-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.modal-header h1 {
+  margin: 0;
+}
+
+.tab-nav {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tab {
+  background: #f0f0f0;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 16px;
+}
+
+.tab.active {
+  background: #333;
+  color: #fff;
+}
+
+.section {
+  margin-top: 16px;
+}
+
+.field {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field input {
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.color-picker {
+  display: flex;
+  gap: 4px;
+}
+
+.color {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+}
+
+button.primary {
+  align-self: flex-start;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #333;
+  color: white;
+  cursor: pointer;
+}

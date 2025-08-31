@@ -1,10 +1,10 @@
 {
-  "name": "Hello Extensions",
-  "description": "Base Level Extension",
+  "name": "FlowRoutine",
+  "description": "작은 단위의 루틴을 반복하며 집중력을 높여주는 도구입니다.",
   "version": "1.0",
   "manifest_version": 3,
   "action": {
-    "default_popup": "hello.html",
-    "default_icon": "hello_extensions.png"
+    "default_popup": "index.html",
+    "default_icon": "assets/icons/hello_extensions.png"
   }
 }
