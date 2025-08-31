@@ -1,11 +1,102 @@
 // src/background.js
 // 확장 프로그램의 타이머 상태 관리 및 탭 이동 시 타이머 데이터 전달
 
+function registerContentScript() {
+  chrome.scripting.registerContentScripts(
+    [
+      {
+        id: 'flowroutine-content-script',
+        matches: ['<all_urls>'],
+        js: ['contentScript.js'],
+        runAt: 'document_end',
+      },
+    ],
+    () => {
+      if (chrome.runtime.lastError) {
+        console.warn('Failed to register content script:', chrome.runtime.lastError);
+      } else {
+        console.log('FlowRoutine content script registered');
+        injectContentScriptToAllTabs();
+      }
+    }
+  );
+}
+
+function injectContentScript(tabId) {
+  chrome.scripting.executeScript(
+    { target: { tabId }, files: ['contentScript.js'] },
+    () => {
+      if (chrome.runtime.lastError) {
+        // ignore injection errors (e.g., chrome pages)
+      }
+    }
+  );
+}
+
+function injectContentScriptToAllTabs() {
+  chrome.tabs.query({}, (tabs) => {
+    tabs.forEach((tab) => {
+      if (tab.id) {
+        injectContentScript(tab.id);
+      }
+    });
+  });
+}
+
+function initializeActiveTab() {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs[0]?.id) {
+      currentTabId = tabs[0].id;
+      injectContentScript(currentTabId);
+      if (timers.length > 0) {
+        chrome.tabs.sendMessage(currentTabId, { type: 'timers', timers }, () => {
+          if (chrome.runtime.lastError) {
+            // ignore
+          }
+        });
+      }
+    }
+  });
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log('FlowRoutine background script loaded');
+  registerContentScript();
+  initializeActiveTab();
+});
+
+// Also register on startup to handle service worker restarts.
+chrome.runtime.onStartup?.addListener(() => {
+  registerContentScript();
+  initializeActiveTab();
 });
 
 let timers = [];
+let currentTabId;
+
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  const { tabId } = activeInfo;
+  if (currentTabId && currentTabId !== tabId) {
+    chrome.tabs.sendMessage(
+      currentTabId,
+      { type: 'timers', timers: [] },
+      () => {
+        if (chrome.runtime.lastError) {
+          // ignore if tab doesn't have the script
+        }
+      }
+    );
+  }
+  currentTabId = tabId;
+  injectContentScript(tabId);
+  if (timers.length > 0) {
+    chrome.tabs.sendMessage(tabId, { type: 'timers', timers }, () => {
+      if (chrome.runtime.lastError) {
+        // ignore
+      }
+    });
+  }
+});
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'SHOW_TIMER' && message.timer) {
