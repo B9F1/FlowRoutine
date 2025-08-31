@@ -33,7 +33,8 @@ function broadcastTimers() {
   chrome.tabs.query({}, (tabs: any[]) => {
     tabs.forEach((tab) => {
       if (tab.id !== undefined) {
-        chrome.tabs.sendMessage(tab.id, { type: 'timers', timers: running });
+        const timersForTab = tab.active ? running : [];
+        chrome.tabs.sendMessage(tab.id, { type: 'timers', timers: timersForTab });
       }
     });
   });

@@ -98,7 +98,8 @@ function broadcastTimers() {
   chrome.tabs.query({}, (tabs) => {
     tabs.forEach((tab) => {
       if (tab.id) {
-        chrome.tabs.sendMessage(tab.id, { type: 'timers', timers: running }, () => {
+        const timersForTab = tab.active ? running : [];
+        chrome.tabs.sendMessage(tab.id, { type: 'timers', timers: timersForTab }, () => {
           if (chrome.runtime.lastError) {
             // ignore missing receivers
           }

@@ -1,12 +1,4 @@
-interface Timer {
-  id: number;
-  label: string;
-  type: string;
-  duration: number; // minutes
-  running: boolean;
-  color: string;
-  endTime?: number;
-}
+import type { Timer } from './types';
 
 declare const chrome: any;
 
@@ -100,7 +92,8 @@ function render(timers: Timer[]) {
       el.style.flexDirection = 'column';
       el.style.alignItems = 'center';
       el.style.justifyContent = 'center';
-      el.style.background = timer.color;
+      // unify timer background to black and text to white
+      el.style.background = '#000';
       el.style.color = '#fff';
       el.style.borderRadius = '8px';
       el.style.fontFamily = 'sans-serif';
@@ -110,6 +103,15 @@ function render(timers: Timer[]) {
       el.dataset.id = String(timer.id);
       el.title = timer.label;
       document.body.appendChild(el);
+      const dot = document.createElement('div');
+      dot.style.position = 'absolute';
+      dot.style.top = '4px';
+      dot.style.left = '4px';
+      dot.style.width = '8px';
+      dot.style.height = '8px';
+      dot.style.borderRadius = '50%';
+      dot.style.background = timer.color;
+      el.appendChild(dot);
 
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       svg.setAttribute('width', '60');
@@ -121,7 +123,8 @@ function render(timers: Timer[]) {
       bg.setAttribute('cx', '30');
       bg.setAttribute('cy', '30');
       bg.setAttribute('r', String(radius));
-      bg.setAttribute('stroke', '#555');
+      // base ring uses white for contrast against black background
+      bg.setAttribute('stroke', '#fff');
       bg.setAttribute('stroke-width', '4');
       bg.setAttribute('fill', 'none');
 
@@ -129,7 +132,8 @@ function render(timers: Timer[]) {
       fg.setAttribute('cx', '30');
       fg.setAttribute('cy', '30');
       fg.setAttribute('r', String(radius));
-      fg.setAttribute('stroke', '#fff');
+      // progress ring reflects timer type color
+      fg.setAttribute('stroke', timer.color);
       fg.setAttribute('stroke-width', '4');
       fg.setAttribute('fill', 'none');
       fg.setAttribute('stroke-dasharray', String(circumference));
@@ -338,17 +342,21 @@ function computeSnap(el: HTMLDivElement) {
   document.querySelectorAll('.flowroutine-floating-timer').forEach((other) => {
     if (other === el) return;
     const o = (other as HTMLDivElement).getBoundingClientRect();
+    const verticalOverlap =
+      Math.min(rect.bottom, o.bottom) - Math.max(rect.top, o.top);
+    const horizontalOverlap =
+      Math.min(rect.right, o.right) - Math.max(rect.left, o.left);
     const dLeft = Math.abs(rect.left - o.right);
-    if (dLeft <= buffer)
+    if (dLeft <= buffer && verticalOverlap > 0)
       candidates.push({ dist: dLeft, x: o.right, y: o.top, target: other as HTMLElement });
     const dRight = Math.abs(rect.right - o.left);
-    if (dRight <= buffer)
+    if (dRight <= buffer && verticalOverlap > 0)
       candidates.push({ dist: dRight, x: o.left - width, y: o.top, target: other as HTMLElement });
     const dTop = Math.abs(rect.top - o.bottom);
-    if (dTop <= buffer)
+    if (dTop <= buffer && horizontalOverlap > 0)
       candidates.push({ dist: dTop, x: o.left, y: o.bottom, target: other as HTMLElement });
     const dBottom = Math.abs(rect.bottom - o.top);
-    if (dBottom <= buffer)
+    if (dBottom <= buffer && horizontalOverlap > 0)
       candidates.push({ dist: dBottom, x: o.left, y: o.top - height, target: other as HTMLElement });
   });
   if (candidates.length === 0) return null;
