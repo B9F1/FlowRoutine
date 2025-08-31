@@ -1,0 +1,40 @@
+.floating-timer {
+  all: initial;
+  position: fixed;
+  width: 150px;
+  height: 80px;
+  background: #fff;
+  color: #000;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: move;
+  box-sizing: border-box;
+  font-family: sans-serif;
+  z-index: 1000;
+  user-select: none;
+}
+
+.floating-timer .close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: none;
+  border: none;
+  color: #000;
+  cursor: pointer;
+}
+
+.floating-timer .timer-time {
+  font-size: 24px;
+  text-align: center;
+}
+
+.floating-timer .timer-dot {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+

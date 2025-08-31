@@ -1,0 +1,27 @@
+{
+  "name": "FlowRoutine",
+  "description": "작은 단위의 루틴을 반복하며 집중력을 높여주는 도구",
+  "version": "1.0",
+  "manifest_version": 3,
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": "assets/icons/logo-FlowRoutine.png"
+  },
+  "icons": {
+    "16": "assets/icons/logo-FlowRoutine.png",
+    "32": "assets/icons/logo-FlowRoutine.png",
+    "48": "assets/icons/logo-FlowRoutine.png",
+    "128": "assets/icons/logo-FlowRoutine.png"
+  },
+  "permissions": ["tabs", "storage", "scripting", "notifications"],
+  "host_permissions": ["<all_urls>"],
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/sounds/bell_01.mp3"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
