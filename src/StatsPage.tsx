@@ -9,23 +9,30 @@ interface Totals {
   [label: string]: number;
 }
 
-function aggregate(records: StatRecord[], rangeMs: number): Totals {
+function aggregate(
+  records: StatRecord[],
+  rangeMs: number,
+  startHour: number,
+  endHour: number
+): Totals {
   const now = Date.now();
-  const filtered = records.filter((r) => now - r.timestamp <= rangeMs);
   const totals: Totals = {};
-  filtered.forEach((r) => {
-    totals[r.label] = (totals[r.label] || 0) + r.duration;
+  records.forEach((r) => {
+    const withinRange = now - r.timestamp <= rangeMs;
+    const hour = new Date(r.timestamp).getHours();
+    const withinHours = hour >= startHour && hour < endHour;
+    if (withinRange && withinHours) {
+      totals[r.label] = (totals[r.label] || 0) + r.duration;
+    }
   });
   return totals;
 }
 
-function BarChart({ data }: { data: Totals }) {
-  // ...기존 코드 제거: react-chartjs-2 기반 StatsBarChart로 대체...
-  return null;
-}
-
 export default function StatsPage() {
   const [records, setRecords] = useState<StatRecord[]>([]);
+  const [period, setPeriod] = useState<'day' | 'week' | 'month'>('day');
+  const [startHour, setStartHour] = useState(0);
+  const [endHour, setEndHour] = useState(24);
 
   useEffect(() => {
     chrome.storage?.local.get(['stats'], (data: any) => {
@@ -35,45 +42,73 @@ export default function StatsPage() {
     });
   }, []);
 
-  const day = aggregate(records, 24 * 60 * 60 * 1000);
-  const week = aggregate(records, 7 * 24 * 60 * 60 * 1000);
-  const month = aggregate(records, 30 * 24 * 60 * 60 * 1000);
-
-  const exportCSV = () => {
-    const header = 'label,duration,timestamp\n';
-    const rows = records
-      .map(
-        (r) => `${r.label},${r.duration},${new Date(r.timestamp).toISOString()}`
-      )
-      .join('\n');
-    const blob = new Blob([header + rows], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'statistics.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+  const rangeMsMap = {
+    day: 24 * 60 * 60 * 1000,
+    week: 7 * 24 * 60 * 60 * 1000,
+    month: 30 * 24 * 60 * 60 * 1000,
   };
 
-  // Chart.js용 데이터 변환
+  const totals = aggregate(records, rangeMsMap[period], startHour, endHour);
+
   const chartData = {
-    labels: Object.keys(day),
+    labels: Object.keys(totals),
     datasets: [
       {
-        label: '일별 집중 시간',
-        data: Object.values(day),
+        label: '집중 시간',
+        data: Object.values(totals),
         backgroundColor: 'rgba(53, 162, 235, 0.5)',
       },
     ],
   };
 
+  const options = {
+    responsive: true,
+    plugins: {
+      legend: { position: 'top' as const },
+      title: {
+        display: true,
+        text: `${period === 'day' ? '일별' : period === 'week' ? '주별' : '월별'} ${startHour}시~${endHour}시`,
+      },
+    },
+  };
+
   return (
     <div className="stats-page">
       <h1>사용 통계</h1>
-      <button onClick={exportCSV}>CSV로 내보내기</button>
-      <h2>일별</h2>
-      <StatsBarChart data={chartData} />
-      {/* 주별/월별은 기존 BarChart 유지 또는 StatsBarChart로 확장 가능 */}
+      <div className="controls">
+        <label>
+          기간:
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value as 'day' | 'week' | 'month')}
+          >
+            <option value="day">일별</option>
+            <option value="week">주별</option>
+            <option value="month">월별</option>
+          </select>
+        </label>
+        <label>
+          시작 시간:
+          <input
+            type="number"
+            min={0}
+            max={23}
+            value={startHour}
+            onChange={(e) => setStartHour(Number(e.target.value))}
+          />
+        </label>
+        <label>
+          종료 시간:
+          <input
+            type="number"
+            min={1}
+            max={24}
+            value={endHour}
+            onChange={(e) => setEndHour(Number(e.target.value))}
+          />
+        </label>
+      </div>
+      <StatsBarChart data={chartData} options={options} />
     </div>
   );
 }
