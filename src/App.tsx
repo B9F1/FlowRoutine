@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import TimerModal from './components/TimerModal';
 import FloatingTimer from './components/FloatingTimer';
-import type { Timer } from './types';
+import type { Timer, Settings } from './types';
 declare const chrome: any;
 
 function App() {
   const [timers, setTimers] = useState<Timer[]>([]);
   const [showModal, setShowModal] = useState(true);
+  const [settings, setSettings] = useState<Settings | null>(null);
 
   useEffect(() => {
     chrome.runtime.sendMessage({ type: 'getTimers' }, (response: any) => {
@@ -15,6 +16,9 @@ function App() {
       } else {
         setTimers([]);
       }
+    });
+    chrome.runtime.sendMessage({ type: 'getSettings' }, (res: any) => {
+      setSettings(res);
     });
   }, []);
 
@@ -50,13 +54,16 @@ function App() {
     chrome.runtime.sendMessage({ type: 'SET_TIMER', data: null }, () => {});
   };
 
-  // 실행 중인 타이머 찾기
-  const runningTimer = timers.find((t) => t.running);
+  const updateSettings = (updates: Partial<Settings>) => {
+    chrome.runtime.sendMessage({ type: 'updateSettings', updates }, (res: any) => {
+      setSettings(res);
+    });
+  };
 
   return (
     <div className="app">
       {/* FloatingTimer 렌더링 제거: 웹페이지에는 contentScript.js가 직접 생성 */}
-      {showModal && (
+      {showModal && settings && (
         <TimerModal
           timers={timers}
           addTimer={addTimer}
@@ -64,6 +71,8 @@ function App() {
           stopTimer={stopTimer}
           removeTimer={removeTimer}
           onClose={() => setShowModal(false)}
+          settings={settings}
+          updateSettings={updateSettings}
         />
       )}
     </div>

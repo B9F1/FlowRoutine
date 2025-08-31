@@ -16,6 +16,6 @@
     "48": "assets/icons/logo-FlowRoutine.png",
     "128": "assets/icons/logo-FlowRoutine.png"
   },
-  "permissions": ["tabs", "storage", "scripting"],
+  "permissions": ["tabs", "storage", "scripting", "notifications"],
   "host_permissions": ["<all_urls>"]
 }

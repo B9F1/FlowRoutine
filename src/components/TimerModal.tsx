@@ -1,11 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './TimerModal.css';
-import type { Timer } from '../types';
-
-interface TimerType {
-  name: string;
-  color: string;
-}
+import type { Timer, Settings, TimerType } from '../types';
 
 interface Props {
   timers: Timer[];
@@ -14,6 +9,8 @@ interface Props {
   stopTimer: (id: number) => void;
   removeTimer: (id: number) => void;
   onClose: () => void;
+  settings: Settings;
+  updateSettings: (updates: Partial<Settings>) => void;
 }
 
 export default function TimerModal({
@@ -23,22 +20,17 @@ export default function TimerModal({
   stopTimer,
   removeTimer,
   onClose,
+  settings,
+  updateSettings,
 }: Props) {
   const colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#1abc9c', '#3498db', '#9b59b6', '#34495e'];
 
   const [activeTab, setActiveTab] = useState<'list' | 'settings'>('list');
-  const [defaultLabel, setDefaultLabel] = useState('work-timer');
-  const [timerTypes, setTimerTypes] = useState<TimerType[]>([
-    { name: '업무', color: '#2ecc71' },
-    { name: '학습', color: '#3498db' },
-    { name: '브레이크', color: '#e74c3c' },
-  ]);
-
   const [newTypeName, setNewTypeName] = useState('');
   const [newTypeColor, setNewTypeColor] = useState(colors[0]);
 
-  const [timerLabel, setTimerLabel] = useState(defaultLabel);
-  const [timerType, setTimerType] = useState(timerTypes[0]?.name || '');
+  const [timerLabel, setTimerLabel] = useState(settings.defaultLabel);
+  const [timerType, setTimerType] = useState(settings.timerTypes[0]?.name || '');
   const [duration, setDuration] = useState(60);
   const [now, setNow] = useState(Date.now());
 
@@ -48,39 +40,39 @@ export default function TimerModal({
   }, []);
 
   useEffect(() => {
-    setTimerLabel(defaultLabel);
-  }, [defaultLabel]);
+    setTimerLabel(settings.defaultLabel);
+  }, [settings.defaultLabel]);
 
   const handleAddType = () => {
     if (!newTypeName.trim()) return;
-    setTimerTypes([...timerTypes, { name: newTypeName, color: newTypeColor }]);
+    const types = [...settings.timerTypes, { name: newTypeName, color: newTypeColor }];
+    updateSettings({ timerTypes: types });
     setNewTypeName('');
   };
 
   const handleRemoveType = (name: string) => {
-    setTimerTypes(timerTypes.filter((t) => t.name !== name));
+    const types = settings.timerTypes.filter((t) => t.name !== name);
+    updateSettings({ timerTypes: types });
     if (timerType === name) {
       setTimerType('');
     }
   };
 
   const handleAddTimer = () => {
-    console.log('[타이머 추가 버튼 클릭]', { label: timerLabel, type: timerType, duration });
     if (!timerLabel.trim() || !timerType || duration <= 0) {
-      console.log('[타이머 추가 실패] 입력값 오류');
       return;
     }
+    const color = settings.timerTypes.find((t) => t.name === timerType)?.color || '#333';
     addTimer({
       id: Date.now(),
       label: timerLabel,
       type: timerType,
       duration,
       running: false,
+      color,
     });
-    console.log('[타이머 추가 요청 완료]');
-    setTimerLabel(defaultLabel);
-    setTimerType(timerTypes[0]?.name || '');
-    // setDuration(25); // 마지막 생성한 타이머 시간 유지 (초기화하지 않음)
+    setTimerLabel(settings.defaultLabel);
+    setTimerType(settings.timerTypes[0]?.name || '');
   };
 
   return (
@@ -109,23 +101,11 @@ export default function TimerModal({
       {activeTab === 'settings' && (
         <>
           <section className="section">
-            <h2>기본 라벨 설정</h2>
-            <div className="field">
-              <label>기본 타이머 라벨</label>
-              <input
-                type="text"
-                value={defaultLabel}
-                onChange={(e) => setDefaultLabel(e.target.value)}
-              />
-            </div>
-          </section>
-
-          <section className="section">
             <h2>타이머 타입 관리</h2>
             <div className="field">
               <label>현재 타이머 타입</label>
               <div className="current-types">
-                {timerTypes.map((t) => (
+                {settings.timerTypes.map((t) => (
                   <span
                     key={t.name}
                     className="current-type"
@@ -165,6 +145,64 @@ export default function TimerModal({
               </button>
             </div>
           </section>
+
+          <section className="section">
+            <h2>기본 설정</h2>
+            <div className="field">
+              <label>기본 타이머 라벨</label>
+              <input
+                type="text"
+                value={settings.defaultLabel}
+                onChange={(e) => updateSettings({ defaultLabel: e.target.value })}
+              />
+            </div>
+            <div className="field">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={settings.showFloating}
+                  onChange={(e) => updateSettings({ showFloating: e.target.checked })}
+                />{' '}
+                화면에 타이머 보이기
+              </label>
+            </div>
+            <div className="field">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={settings.enableNotifications}
+                  onChange={(e) =>
+                    updateSettings({ enableNotifications: e.target.checked })
+                  }
+                />{' '}
+                시스템 알림 전송
+              </label>
+            </div>
+            <div className="field">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={settings.enableSound}
+                  onChange={(e) =>
+                    updateSettings({ enableSound: e.target.checked })
+                  }
+                />{' '}
+                종료 알림 소리
+              </label>
+              {settings.enableSound && (
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={settings.volume}
+                  onChange={(e) =>
+                    updateSettings({ volume: Number(e.target.value) })
+                  }
+                />
+              )}
+            </div>
+          </section>
         </>
       )}
 
@@ -178,7 +216,7 @@ export default function TimerModal({
                 type="text"
                 value={timerLabel}
                 onChange={(e) => setTimerLabel(e.target.value)}
-                placeholder={defaultLabel}
+                placeholder={settings.defaultLabel}
               />
             </div>
             <div className="field">
@@ -190,7 +228,7 @@ export default function TimerModal({
                 <option value="" disabled>
                   타이머 타입을 선택하세요
                 </option>
-                {timerTypes.map((t) => (
+                {settings.timerTypes.map((t) => (
                   <option key={t.name} value={t.name}>
                     {t.name}
                   </option>
@@ -207,7 +245,7 @@ export default function TimerModal({
                 onChange={(e) => setDuration(Number(e.target.value))}
               />
             </div>
-            <button className="primary" onClick={() => { console.log('[타이머 추가 버튼 클릭]'); handleAddTimer(); }}>
+            <button className="primary" onClick={handleAddTimer}>
               + 타이머 추가
             </button>
           </section>
@@ -224,10 +262,9 @@ export default function TimerModal({
                     {t.label} ({t.type}) - {t.duration}분
                     {t.running && t.endTime && (
                       <>
-                        {' '}
-                        -
+                        {' '}-
                         {(() => {
-                          const rem = Math.max(0, t.endTime! - now);
+                          const rem = Math.max(0, t.endTime - now);
                           const m = Math.floor(rem / 60000)
                             .toString()
                             .padStart(2, '0');

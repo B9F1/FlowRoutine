@@ -4,6 +4,7 @@ interface Timer {
   type: string;
   duration: number; // minutes
   running: boolean;
+  color: string;
   endTime?: number;
 }
 
@@ -18,6 +19,28 @@ interface Display {
 
 const displays: Record<number, Display> = {};
 
+function playBell(volume = 1) {
+  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const gain = ctx.createGain();
+  gain.gain.value = volume;
+  gain.connect(ctx.destination);
+  const osc1 = ctx.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.value = 880;
+  osc1.connect(gain);
+  const osc2 = ctx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.value = 1320;
+  osc2.connect(gain);
+  const now = ctx.currentTime;
+  gain.gain.setValueAtTime(volume, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 1);
+  osc1.start(now);
+  osc2.start(now);
+  osc1.stop(now + 1);
+  osc2.stop(now + 1);
+}
+
 // prevent multiple injections
 if (!(window as any).flowRoutineInitialized) {
   (window as any).flowRoutineInitialized = true;
@@ -25,7 +48,17 @@ if (!(window as any).flowRoutineInitialized) {
   chrome.runtime.onMessage.addListener((message: any) => {
     if (message.type === 'timers') {
       render(message.timers as Timer[]);
+    } else if (message.type === 'playSound') {
+      playBell(message.volume ?? 1);
     }
+  });
+
+  chrome.runtime.sendMessage({ type: 'getSettings' }, (s: any) => {
+    const show = s?.showFloating !== false;
+    chrome.runtime.sendMessage({ type: 'getTimers' }, (res: any) => {
+      const list = Array.isArray(res?.timerData) ? res.timerData : [];
+      render(show ? list.filter((t: Timer) => t.running) : []);
+    });
   });
 }
 
@@ -42,29 +75,41 @@ function render(timers: Timer[]) {
 
   timers.forEach((timer, index) => {
     let display = displays[timer.id];
-    if (!display) {
+    if (display) {
+      if (typeof timer.x === 'number' && typeof timer.y === 'number') {
+        display.el.style.left = `${timer.x}px`;
+        display.el.style.top = `${timer.y}px`;
+        display.el.style.right = 'auto';
+      }
+    } else {
       const el = document.createElement('div');
       el.className = 'flowroutine-floating-timer';
+      el.style.setProperty('all', 'initial');
       el.style.position = 'fixed';
-      el.style.top = '10px';
-      el.style.right = `${10 + index * 110}px`;
+      if (typeof timer.x === 'number' && typeof timer.y === 'number') {
+        el.style.left = `${timer.x}px`;
+        el.style.top = `${timer.y}px`;
+        el.style.right = 'auto';
+      } else {
+        el.style.top = '10px';
+        el.style.right = `${10 + index * 110}px`;
+      }
       el.style.width = '100px';
       el.style.height = '100px';
       el.style.display = 'flex';
       el.style.flexDirection = 'column';
       el.style.alignItems = 'center';
       el.style.justifyContent = 'center';
-      el.style.background = 'rgba(0, 0, 0, 0.7)';
+      el.style.background = timer.color;
       el.style.color = '#fff';
       el.style.borderRadius = '8px';
+      el.style.fontFamily = 'sans-serif';
       el.style.zIndex = '2147483647';
+      el.style.userSelect = 'none';
+      el.style.cursor = 'grab';
       el.dataset.id = String(timer.id);
+      el.title = timer.label;
       document.body.appendChild(el);
-
-      const labelEl = document.createElement('div');
-      labelEl.textContent = timer.label;
-      labelEl.style.marginBottom = '4px';
-      el.appendChild(labelEl);
 
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       svg.setAttribute('width', '60');
@@ -106,44 +151,129 @@ function render(timers: Timer[]) {
       let offsetX = 0;
       let offsetY = 0;
       let dragging = false;
+      let snapTargetEl: HTMLElement | null = null;
 
       el.addEventListener('mousedown', (e) => {
         dragging = true;
         offsetX = e.clientX - el.offsetLeft;
         offsetY = e.clientY - el.offsetTop;
         el.style.cursor = 'grabbing';
+        e.preventDefault();
+        e.stopPropagation();
+        document.body.style.userSelect = 'none';
       });
 
       document.addEventListener('mousemove', (e) => {
         if (!dragging) return;
+        e.preventDefault();
+        e.stopPropagation();
         el.style.top = `${e.clientY - offsetY}px`;
         el.style.left = `${e.clientX - offsetX}px`;
         el.style.right = 'auto';
-      });
+        const snapPos = computeSnap(el);
+        if (snapPos) {
+          el.style.outline = '2px solid #fff';
+          if (snapTargetEl && snapTargetEl !== snapPos.target) {
+            snapTargetEl.style.outline = '';
+          }
+          if (snapPos.target && snapPos.target !== el) {
+            snapTargetEl = snapPos.target as HTMLElement;
+            snapTargetEl.style.outline = '2px dashed #fff';
+          } else {
+            snapTargetEl = null;
+          }
+        } else {
+          el.style.outline = '';
+          if (snapTargetEl) {
+            snapTargetEl.style.outline = '';
+            snapTargetEl = null;
+          }
+        }
+      }, true);
 
-      document.addEventListener('mouseup', () => {
+      document.addEventListener('mouseup', (e) => {
         if (!dragging) return;
+        e.preventDefault();
+        e.stopPropagation();
         dragging = false;
         el.style.cursor = 'grab';
         snap(el);
-      });
+        el.style.outline = '';
+        if (snapTargetEl) {
+          snapTargetEl.style.outline = '';
+          snapTargetEl = null;
+        }
+        document.body.style.userSelect = '';
+        const x = parseInt(el.style.left || '0', 10);
+        const y = parseInt(el.style.top || '0', 10);
+        chrome.runtime.sendMessage({
+          type: 'moveTimer',
+          id: timer.id,
+          x,
+          y,
+        });
+      }, true);
+
+      el.addEventListener(
+        'touchstart',
+        (e) => {
+          dragging = true;
+          const touch = e.touches[0];
+          offsetX = touch.clientX - el.offsetLeft;
+          offsetY = touch.clientY - el.offsetTop;
+          e.preventDefault();
+          e.stopPropagation();
+          document.body.style.userSelect = 'none';
+        },
+        { passive: false }
+      );
 
       el.addEventListener(
         'touchmove',
         (e) => {
           if (!dragging) return;
+          e.preventDefault();
+          e.stopPropagation();
           const touch = e.touches[0];
           el.style.top = `${touch.clientY - offsetY}px`;
           el.style.left = `${touch.clientX - offsetX}px`;
           el.style.right = 'auto';
+          const snapPos = computeSnap(el);
+          if (snapPos) {
+            el.style.outline = '2px solid #fff';
+            if (snapTargetEl && snapTargetEl !== snapPos.target) {
+              snapTargetEl.style.outline = '';
+            }
+            if (snapPos.target && snapPos.target !== el) {
+              snapTargetEl = snapPos.target as HTMLElement;
+              snapTargetEl.style.outline = '2px dashed #fff';
+            } else {
+              snapTargetEl = null;
+            }
+          } else {
+            el.style.outline = '';
+            if (snapTargetEl) {
+              snapTargetEl.style.outline = '';
+              snapTargetEl = null;
+            }
+          }
         },
-        { passive: true }
+        { passive: false }
       );
 
       el.addEventListener('touchend', () => {
         if (!dragging) return;
         dragging = false;
         snap(el);
+        el.style.outline = '';
+        if (snapTargetEl) {
+          snapTargetEl.style.outline = '';
+          snapTargetEl = null;
+        }
+        document.body.style.userSelect = '';
+        const x = parseInt(el.style.left || '0', 10);
+        const y = parseInt(el.style.top || '0', 10);
+        chrome.runtime.sendMessage({ type: 'moveTimer', id: timer.id, x, y });
       });
 
       display = displays[timer.id] = { el, interval: 0, progress: fg, timeEl: textEl };
@@ -162,6 +292,11 @@ function render(timers: Timer[]) {
       display!.timeEl.textContent = `${m}:${s}`;
       if (remaining <= 0) {
         clearInterval(display!.interval);
+        chrome.runtime.sendMessage({
+          type: 'timerEnded',
+          id: timer.id,
+          label: timer.label,
+        });
       }
     };
 
@@ -171,41 +306,62 @@ function render(timers: Timer[]) {
   });
 }
 
-function snap(el: HTMLDivElement) {
+function computeSnap(el: HTMLDivElement) {
   const buffer = 10;
   const rect = el.getBoundingClientRect();
-  if (rect.left <= buffer) {
-    el.style.left = '0px';
-    el.style.right = 'auto';
-  }
-  if (window.innerWidth - rect.right <= buffer) {
-    el.style.left = 'auto';
-    el.style.right = '0px';
-  }
-  if (rect.top <= buffer) {
-    el.style.top = '0px';
-  }
-  if (window.innerHeight - rect.bottom <= buffer) {
-    el.style.top = 'auto';
-    el.style.bottom = '0px';
-  }
+  const width = rect.width;
+  const height = rect.height;
+  const candidates: {
+    dist: number;
+    x: number;
+    y: number;
+    target?: HTMLElement;
+  }[] = [];
+
+  if (rect.left <= buffer)
+    candidates.push({ dist: rect.left, x: 0, y: rect.top });
+  if (window.innerWidth - rect.right <= buffer)
+    candidates.push({
+      dist: window.innerWidth - rect.right,
+      x: window.innerWidth - width,
+      y: rect.top,
+    });
+  if (rect.top <= buffer)
+    candidates.push({ dist: rect.top, x: rect.left, y: 0 });
+  if (window.innerHeight - rect.bottom <= buffer)
+    candidates.push({
+      dist: window.innerHeight - rect.bottom,
+      x: rect.left,
+      y: window.innerHeight - height,
+    });
 
   document.querySelectorAll('.flowroutine-floating-timer').forEach((other) => {
     if (other === el) return;
     const o = (other as HTMLDivElement).getBoundingClientRect();
-    if (Math.abs(rect.left - o.right) <= buffer) {
-      el.style.left = `${o.right}px`;
-      el.style.right = 'auto';
-    }
-    if (Math.abs(rect.right - o.left) <= buffer) {
-      el.style.left = `${o.left - rect.width}px`;
-      el.style.right = 'auto';
-    }
-    if (Math.abs(rect.top - o.bottom) <= buffer) {
-      el.style.top = `${o.bottom}px`;
-    }
-    if (Math.abs(rect.bottom - o.top) <= buffer) {
-      el.style.top = `${o.top - rect.height}px`;
-    }
+    const dLeft = Math.abs(rect.left - o.right);
+    if (dLeft <= buffer)
+      candidates.push({ dist: dLeft, x: o.right, y: o.top, target: other as HTMLElement });
+    const dRight = Math.abs(rect.right - o.left);
+    if (dRight <= buffer)
+      candidates.push({ dist: dRight, x: o.left - width, y: o.top, target: other as HTMLElement });
+    const dTop = Math.abs(rect.top - o.bottom);
+    if (dTop <= buffer)
+      candidates.push({ dist: dTop, x: o.left, y: o.bottom, target: other as HTMLElement });
+    const dBottom = Math.abs(rect.bottom - o.top);
+    if (dBottom <= buffer)
+      candidates.push({ dist: dBottom, x: o.left, y: o.top - height, target: other as HTMLElement });
   });
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => a.dist - b.dist);
+  return candidates[0];
+}
+
+function snap(el: HTMLDivElement) {
+  const pos = computeSnap(el);
+  if (pos) {
+    el.style.left = `${pos.x}px`;
+    el.style.top = `${pos.y}px`;
+    el.style.right = 'auto';
+  }
+  return pos;
 }
