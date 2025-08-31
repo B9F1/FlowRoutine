@@ -3,8 +3,8 @@
   position: fixed;
   width: 150px;
   height: 80px;
-  background: #333;
-  color: #fff;
+  background: #fff;
+  color: #000;
   border-radius: 8px;
   padding: 8px;
   cursor: move;
@@ -20,7 +20,7 @@
   right: 4px;
   background: none;
   border: none;
-  color: #fff;
+  color: #000;
   cursor: pointer;
 }
 
@@ -29,7 +29,12 @@
   text-align: center;
 }
 
-.floating-timer.snap {
-  outline: 2px solid #fff;
+.floating-timer .timer-dot {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
 }
 

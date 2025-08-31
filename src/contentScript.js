@@ -5,25 +5,17 @@ if (!window.flowRoutineInitialized) {
   const displays = {};
 
   function playBell(volume = 1) {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const gain = ctx.createGain();
-    gain.gain.value = volume;
-    gain.connect(ctx.destination);
-    const osc1 = ctx.createOscillator();
-    osc1.type = 'sine';
-    osc1.frequency.value = 880;
-    osc1.connect(gain);
-    const osc2 = ctx.createOscillator();
-    osc2.type = 'sine';
-    osc2.frequency.value = 1320;
-    osc2.connect(gain);
-    const now = ctx.currentTime;
-    gain.gain.setValueAtTime(volume, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 1);
-    osc1.start(now);
-    osc2.start(now);
-    osc1.stop(now + 1);
-    osc2.stop(now + 1);
+    let audio = document.getElementById('flowroutine-bell-audio');
+    if (!audio) {
+      audio = document.createElement('audio');
+      audio.id = 'flowroutine-bell-audio';
+      audio.src = chrome.runtime.getURL('assets/sounds/bell_01.mp3');
+      audio.preload = 'auto';
+      document.body.appendChild(audio);
+    }
+    audio.volume = volume;
+    audio.currentTime = 0;
+    audio.play();
   }
 
   chrome.runtime.onMessage.addListener((message) => {
