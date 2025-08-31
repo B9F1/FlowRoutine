@@ -8,13 +8,13 @@
   },
   "action": {
     "default_popup": "index.html",
-    "default_icon": "assets/icons/hello_extensions.png"
+    "default_icon": "assets/icons/logo-FlowRoutine.png"
   },
   "icons": {
-    "16": "assets/icons/hello_extensions.png",
-    "32": "assets/icons/hello_extensions.png",
-    "48": "assets/icons/hello_extensions.png",
-    "128": "assets/icons/hello_extensions.png"
+    "16": "assets/icons/logo-FlowRoutine.png",
+    "32": "assets/icons/logo-FlowRoutine.png",
+    "48": "assets/icons/logo-FlowRoutine.png",
+    "128": "assets/icons/logo-FlowRoutine.png"
   },
   "permissions": ["tabs", "storage", "scripting"],
   "host_permissions": ["<all_urls>"]

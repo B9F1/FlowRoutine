@@ -48,8 +48,9 @@ function initializeActiveTab() {
     if (tabs[0]?.id) {
       currentTabId = tabs[0].id;
       injectContentScript(currentTabId);
-      if (timers.length > 0) {
-        chrome.tabs.sendMessage(currentTabId, { type: 'timers', timers }, () => {
+      const running = timers.filter(t => t.running);
+      if (running.length > 0) {
+        chrome.tabs.sendMessage(currentTabId, { type: 'timers', timers: running }, () => {
           if (chrome.runtime.lastError) {
             // ignore
           }
@@ -89,8 +90,9 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
   }
   currentTabId = tabId;
   injectContentScript(tabId);
-  if (timers.length > 0) {
-    chrome.tabs.sendMessage(tabId, { type: 'timers', timers }, () => {
+  const running = timers.filter(t => t.running);
+  if (running.length > 0) {
+    chrome.tabs.sendMessage(tabId, { type: 'timers', timers: running }, () => {
       if (chrome.runtime.lastError) {
         // ignore
       }
@@ -114,7 +116,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       chrome.tabs.query({}, (tabs) => {
         tabs.forEach((tab) => {
           if (tab.id) {
-            chrome.tabs.sendMessage(tab.id, { type: 'timers', timers }, () => {
+            const running = timers.filter(t => t.running);
+            chrome.tabs.sendMessage(tab.id, { type: 'timers', timers: running }, () => {
               if (chrome.runtime.lastError) {
                 // Receiving end does not exist 에러 무시
               }
@@ -134,7 +137,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       chrome.tabs.query({}, (tabs) => {
         tabs.forEach((tab) => {
           if (tab.id) {
-            chrome.tabs.sendMessage(tab.id, { type: 'timers', timers }, () => {
+            const running = timers.filter(t => t.running);
+            chrome.tabs.sendMessage(tab.id, { type: 'timers', timers: running }, () => {
               if (chrome.runtime.lastError) {
                 // Receiving end does not exist 에러 무시
               }
@@ -150,7 +154,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       chrome.tabs.query({}, (tabs) => {
         tabs.forEach((tab) => {
           if (tab.id) {
-            chrome.tabs.sendMessage(tab.id, { type: 'timers', timers }, () => {
+            const running = timers.filter(t => t.running);
+            chrome.tabs.sendMessage(tab.id, { type: 'timers', timers: running }, () => {
               if (chrome.runtime.lastError) {
                 // Receiving end does not exist 에러 무시
               }
@@ -166,7 +171,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       chrome.tabs.query({}, (tabs) => {
         tabs.forEach((tab) => {
           if (tab.id) {
-            chrome.tabs.sendMessage(tab.id, { type: 'timers', timers }, () => {
+            const running = timers.filter(t => t.running);
+            chrome.tabs.sendMessage(tab.id, { type: 'timers', timers: running }, () => {
               if (chrome.runtime.lastError) {
                 // Receiving end does not exist 에러 무시
               }

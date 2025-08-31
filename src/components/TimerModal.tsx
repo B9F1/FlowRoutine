@@ -40,6 +40,12 @@ export default function TimerModal({
   const [timerLabel, setTimerLabel] = useState(defaultLabel);
   const [timerType, setTimerType] = useState(timerTypes[0]?.name || '');
   const [duration, setDuration] = useState(60);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     setTimerLabel(defaultLabel);
@@ -216,6 +222,22 @@ export default function TimerModal({
                 <li key={t.id} className="timer-item">
                   <span>
                     {t.label} ({t.type}) - {t.duration}분
+                    {t.running && t.endTime && (
+                      <>
+                        {' '}
+                        -
+                        {(() => {
+                          const rem = Math.max(0, t.endTime! - now);
+                          const m = Math.floor(rem / 60000)
+                            .toString()
+                            .padStart(2, '0');
+                          const s = Math.floor((rem % 60000) / 1000)
+                            .toString()
+                            .padStart(2, '0');
+                          return ` ${m}:${s}`;
+                        })()}
+                      </>
+                    )}
                   </span>
                   <span>
                     {t.running ? (
