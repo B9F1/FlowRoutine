@@ -7,10 +7,21 @@
 }
 
 .modal-header {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   margin-bottom: 16px;
+}
+
+.modal-header .close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
 }
 
 .modal-header h1 {
@@ -52,6 +63,12 @@
   border: 1px solid #ccc;
 }
 
+.field select {
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
 .color-picker {
   display: flex;
   gap: 4px;
@@ -62,6 +79,50 @@
   height: 20px;
   border-radius: 50%;
   border: 1px solid #ccc;
+}
+
+.color.selected {
+  outline: 2px solid #333;
+}
+
+.current-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.current-type {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 16px;
+  color: #fff;
+  font-size: 12px;
+}
+
+.current-type .delete {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.timer-list {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.timer-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.timer-item button {
+  margin-left: 4px;
 }
 
 button.primary {
