@@ -149,31 +149,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.type === 'removeTimer') {
-    timers = timers.filter(t => t.id !== message.id);
+    timers = timers.filter(t => String(t.id) !== String(message.id));
     save();
     broadcastTimers();
     sendResponse({ timerData: timers });
     return true;
   }
   if (message.type === 'startTimer') {
-    timers = timers.map(t => t.id === message.id ? { ...t, running: true, endTime: Date.now() + t.duration * 60 * 1000 } : t);
+    timers = timers.map(t => String(t.id) === String(message.id) ? { ...t, running: true, endTime: Date.now() + t.duration * 60 * 1000 } : t);
     save();
     broadcastTimers();
     sendResponse({ timerData: timers });
     return true;
   }
   if (message.type === 'stopTimer') {
-    timers = timers.map(t => t.id === message.id ? { ...t, running: false, endTime: undefined } : t);
+    timers = timers.map(t => String(t.id) === String(message.id) ? { ...t, running: false, endTime: undefined } : t);
     save();
     broadcastTimers();
     sendResponse({ timerData: timers });
     return true;
   }
   if (message.type === 'timerEnded') {
-    timers = timers.map(t => t.id === message.id ? { ...t, running: false, endTime: undefined } : t);
+    timers = timers.map(t => String(t.id) === String(message.id) ? { ...t, running: false, endTime: undefined } : t);
     save();
     broadcastTimers();
-    const finished = timers.find(t => t.id === message.id);
+    const finished = timers.find(t => String(t.id) === String(message.id));
     chrome.storage?.local.get(['stats'], (data) => {
       const stats = Array.isArray(data?.stats) ? data.stats : [];
       if (finished) {
@@ -182,7 +182,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
     });
     if (settings.enableNotifications) {
-      chrome.notifications?.create(`timer-${message.id}`, {
+      chrome.notifications?.create(`timer-${String(message.id)}`, {
         type: 'basic',
         iconUrl: chrome.runtime.getURL('assets/icons/logo-FlowRoutine.png'),
         title: '타이머 종료',
@@ -202,7 +202,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.type === 'moveTimer') {
-    timers = timers.map(t => t.id === message.id ? { ...t, x: message.x, y: message.y } : t);
+    timers = timers.map(t => String(t.id) === String(message.id) ? { ...t, x: message.x, y: message.y } : t);
     save();
     broadcastTimers();
     sendResponse({ timerData: timers });

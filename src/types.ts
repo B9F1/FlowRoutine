@@ -1,5 +1,5 @@
 export interface Timer {
-  id: number;
+  id: string;
   label: string;
   type: string;
   duration: number; // minutes

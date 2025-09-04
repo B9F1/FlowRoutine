@@ -51,17 +51,17 @@ function App() {
     // background.js에 SHOW_TIMER 메시지 요청 (MV3 권장 방식)
     chrome.runtime.sendMessage({ type: 'SHOW_TIMER', timer });
   };
-  const startTimer = (id: number) => {
+  const startTimer = (id: string) => {
     send({ type: 'startTimer', id });
     const t = timers.find((t) => t.id === id);
     if (t) chrome.runtime.sendMessage({ type: 'SET_TIMER', data: { ...t, running: true } }, () => {});
   };
-  const stopTimer = (id: number) => {
+  const stopTimer = (id: string) => {
     send({ type: 'stopTimer', id });
     const t = timers.find((t) => t.id === id);
     if (t) chrome.runtime.sendMessage({ type: 'SET_TIMER', data: { ...t, running: false } }, () => {});
   };
-  const removeTimer = (id: number) => {
+  const removeTimer = (id: string) => {
     send({ type: 'removeTimer', id });
     // background에 타이머 데이터 초기화
     chrome.runtime.sendMessage({ type: 'SET_TIMER', data: null }, () => {});

@@ -6,9 +6,9 @@ declare const chrome: any;
 interface Props {
   timers: Timer[];
   addTimer: (timer: Timer) => void;
-  startTimer: (id: number) => void;
-  stopTimer: (id: number) => void;
-  removeTimer: (id: number) => void;
+  startTimer: (id: string) => void;
+  stopTimer: (id: string) => void;
+  removeTimer: (id: string) => void;
   onClose: () => void;
   settings: Settings;
   updateSettings: (updates: Partial<Settings>) => void;
@@ -62,7 +62,7 @@ export default function TimerModal({ timers, addTimer, startTimer, stopTimer, re
     if (timers.some((t) => t.label === timerLabel.trim())) return;
     const color = settings.timerTypes.find((t) => t.name === timerType)?.color || "#333";
     addTimer({
-      id: Date.now(),
+      id: (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`),
       label: timerLabel.trim(),
       type: timerType,
       duration,
