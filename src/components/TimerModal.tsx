@@ -1,6 +1,6 @@
-﻿import React, { useEffect, useState } from 'react';
-import type { Timer, Settings, StatRecord } from '../types';
-import StatsBarChart from './StatsBarChart';
+﻿import React, { useEffect, useState } from "react";
+import type { Timer, Settings, StatRecord } from "../types";
+import StatsBarChart from "./StatsBarChart";
 declare const chrome: any;
 
 interface Props {
@@ -14,29 +14,20 @@ interface Props {
   updateSettings: (updates: Partial<Settings>) => void;
 }
 
-export default function TimerModal({
-  timers,
-  addTimer,
-  startTimer,
-  stopTimer,
-  removeTimer,
-  onClose,
-  settings,
-  updateSettings,
-}: Props) {
-  const colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#1abc9c', '#3498db', '#9b59b6', '#34495e'];
+export default function TimerModal({ timers, addTimer, startTimer, stopTimer, removeTimer, onClose, settings, updateSettings }: Props) {
+  const colors = ["#e74c3c", "#e67e22", "#f1c40f", "#2ecc71", "#1abc9c", "#3498db", "#9b59b6", "#34495e"];
 
-  const [activeTab, setActiveTab] = useState<'list' | 'settings' | 'stats'>('list');
-  const [newTypeName, setNewTypeName] = useState('');
+  const [activeTab, setActiveTab] = useState<"list" | "settings" | "stats">("list");
+  const [newTypeName, setNewTypeName] = useState("");
   const [newTypeColor, setNewTypeColor] = useState(colors[0]);
 
   const [timerLabel, setTimerLabel] = useState(settings.defaultLabel);
-  const [timerType, setTimerType] = useState(settings.timerTypes[0]?.name || '');
+  const [timerType, setTimerType] = useState(settings.timerTypes[0]?.name || "");
   const [duration, setDuration] = useState(60); // minutes
   const [now, setNow] = useState(Date.now());
   const [adding, setAdding] = useState(false);
   const [records, setRecords] = useState<StatRecord[]>([]);
-  const [period, setPeriod] = useState<'day' | 'week' | 'month'>('day');
+  const [period, setPeriod] = useState<"day" | "week" | "month">("day");
   const [startHour, setStartHour] = useState(0);
   const [endHour, setEndHour] = useState(24);
 
@@ -51,7 +42,7 @@ export default function TimerModal({
 
   // Load stats once for the Stats tab
   useEffect(() => {
-    chrome.storage?.local.get(['stats'], (data: any) => {
+    chrome.storage?.local.get(["stats"], (data: any) => {
       if (Array.isArray(data?.stats)) setRecords(data.stats as StatRecord[]);
     });
   }, []);
@@ -60,18 +51,18 @@ export default function TimerModal({
     if (!newTypeName.trim()) return;
     const types = [...settings.timerTypes, { name: newTypeName, color: newTypeColor }];
     updateSettings({ timerTypes: types });
-    setNewTypeName('');
+    setNewTypeName("");
   };
 
   const handleRemoveType = (name: string) => {
     const types = settings.timerTypes.filter((t) => t.name !== name);
     updateSettings({ timerTypes: types });
-    if (timerType === name) setTimerType('');
+    if (timerType === name) setTimerType("");
   };
 
   const handleAddTimer = () => {
     if (!timerLabel.trim() || !timerType || duration <= 0) return;
-    const color = settings.timerTypes.find((t) => t.name === timerType)?.color || '#333';
+    const color = settings.timerTypes.find((t) => t.name === timerType)?.color || "#333";
     addTimer({
       id: Date.now(),
       label: timerLabel,
@@ -81,7 +72,7 @@ export default function TimerModal({
       color,
     });
     setTimerLabel(settings.defaultLabel);
-    setTimerType(settings.timerTypes[0]?.name || '');
+    setTimerType(settings.timerTypes[0]?.name || "");
   };
 
   return (
@@ -97,49 +88,42 @@ export default function TimerModal({
             <p className="text-xs text-muted-foreground">Focus & Flow</p>
           </div>
         </div>
-        <button
-          className="w-8 h-8 rounded-md text-muted-foreground hover:text-foreground"
-          onClick={onClose}
-          aria-label="close"
-        >
-          x
-        </button>
       </div>
 
       {/* Tabs */}
       <div className="w-full h-12 bg-card/50 border-b border-border p-1 flex">
         <button
           className={`flex-1 text-xs rounded-md px-3 py-1.5 transition data-[active=true]:bg-background data-[active=true]:shadow-sm ${
-            activeTab === 'list' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:bg-muted/40'
+            activeTab === "list" ? "bg-background shadow-sm" : "text-muted-foreground hover:bg-muted/40"
           }`}
-          data-active={activeTab === 'list'}
-          onClick={() => setActiveTab('list')}
+          data-active={activeTab === "list"}
+          onClick={() => setActiveTab("list")}
         >
           타이머 목록
         </button>
         <button
           className={`flex-1 text-xs rounded-md px-3 py-1.5 transition data-[active=true]:bg-background data-[active=true]:shadow-sm ${
-            activeTab === 'settings' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:bg-muted/40'
+            activeTab === "settings" ? "bg-background shadow-sm" : "text-muted-foreground hover:bg-muted/40"
           }`}
-          data-active={activeTab === 'settings'}
-          onClick={() => setActiveTab('settings')}
+          data-active={activeTab === "settings"}
+          onClick={() => setActiveTab("settings")}
         >
           설정
         </button>
         <button
           className={`flex-1 text-xs rounded-md px-3 py-1.5 transition ${
-            activeTab === 'stats' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:bg-muted/40'
+            activeTab === "stats" ? "bg-background shadow-sm" : "text-muted-foreground hover:bg-muted/40"
           }`}
-          onClick={() => setActiveTab('stats')}
+          onClick={() => setActiveTab("stats")}
         >
           통계
         </button>
       </div>
 
       {/* Settings */}
-      {activeTab === 'settings' && (
+      {activeTab === "settings" && (
         <>
-          <section className="h-[calc(100%-3rem)] p-4 overflow-y-auto space-y-3">
+          <section className="h-[calc(100%-7rem)] p-4 overflow-y-auto space-y-3">
             <h2 className="text-sm font-semibold text-foreground">기본 타이머 관리</h2>
             <div className="flex flex-wrap gap-2">
               {settings.timerTypes.map((t) => (
@@ -149,7 +133,9 @@ export default function TimerModal({
                   style={{ backgroundColor: t.color }}
                 >
                   {t.name}
-                  <button className="opacity-80 hover:opacity-100" onClick={() => handleRemoveType(t.name)}>x</button>
+                  <button className="opacity-80 hover:opacity-100" onClick={() => handleRemoveType(t.name)}>
+                    x
+                  </button>
                 </span>
               ))}
             </div>
@@ -172,7 +158,7 @@ export default function TimerModal({
                     <button
                       key={c}
                       type="button"
-                      className={`w-6 h-6 rounded-full border ${newTypeColor === c ? 'ring-2 ring-ring' : ''}`}
+                      className={`w-6 h-6 rounded-full border ${newTypeColor === c ? "ring-2 ring-ring" : ""}`}
                       style={{ backgroundColor: c }}
                       onClick={() => setNewTypeColor(c)}
                       aria-label={`color ${c}`}
@@ -253,8 +239,8 @@ export default function TimerModal({
       )}
 
       {/* Stats inside modal */}
-      {activeTab === 'stats' && (
-        <section className="h-[calc(100%-3rem)] p-4 overflow-y-auto space-y-3">
+      {activeTab === "stats" && (
+        <section className="h-[calc(100%-7rem)] p-4 overflow-y-auto space-y-3">
           <div className="mb-2">
             <h2 className="text-sm font-semibold text-foreground">통계</h2>
           </div>
@@ -300,7 +286,7 @@ export default function TimerModal({
           </div>
           {(() => {
             const nowMs = Date.now();
-            const range = { day: 24*60*60*1000, week: 7*24*60*60*1000, month: 30*24*60*60*1000 }[period];
+            const range = { day: 24 * 60 * 60 * 1000, week: 7 * 24 * 60 * 60 * 1000, month: 30 * 24 * 60 * 60 * 1000 }[period];
             const totals: Record<string, number> = {};
             records.forEach((r) => {
               if (nowMs - r.timestamp <= range) {
@@ -310,77 +296,25 @@ export default function TimerModal({
             });
             const data = {
               labels: Object.keys(totals),
-              datasets: [
-                { label: '집중 시간(분)', data: Object.values(totals), backgroundColor: 'rgba(34,197,94,0.5)' },
-              ],
+              datasets: [{ label: "집중 시간(분)", data: Object.values(totals), backgroundColor: "rgba(34,197,94,0.5)" }],
             };
-            const options = { indexAxis: 'y', responsive: true, plugins: { legend: { display: false }, title: { display: false } } };
+            const options = { indexAxis: "y", responsive: true, plugins: { legend: { display: false }, title: { display: false } } };
             return <StatsBarChart data={data} options={options} />;
           })()}
         </section>
       )}
 
       {/* Timer list */}
-      {activeTab === 'list' && (
+      {activeTab === "list" && (
         <>
-          <section className="h-[calc(100%-3rem)] p-4 overflow-y-auto">
+          <section className="h-[calc(100%-7rem)] p-4 overflow-y-auto">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-sm font-semibold text-foreground">타이머 목록</h2>
             </div>
             <h2 className="sr-only">타이머 목록</h2>
-            {timers.length === 0 && (
-              <p className="text-sm text-muted-foreground">등록된 타이머가 없습니다. 아래에서 추가하세요.</p>
-            )}
-            <div className="grid grid-cols-2 gap-3">
-              {timers.map((t) => {
-                const rem = Math.max(0, (t.endTime ?? 0) - now);
-                const m = Math.floor(rem / 60000).toString().padStart(2, '0');
-                const s = Math.floor((rem % 60000) / 1000).toString().padStart(2, '0');
-                const isActive = !!t.running;
-                return (
-                  <div
-                    key={t.id}
-                    className={`relative bg-card border border-border rounded-xl p-4 transition hover:shadow-soft hover-lift ${
-                      isActive ? 'ring-2 ring-primary shadow-medium' : ''
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-foreground mb-1">
-                        {isActive ? `${m}:${s}` : `${t.duration}m`}
-                      </div>
-                      <div className="text-xs text-muted-foreground mb-2">{t.label}</div>
-                      <div className="flex items-center justify-center gap-2">
-                        {t.running ? (
-                          <button
-                            className="text-xs px-2 py-1 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                            onClick={() => stopTimer(t.id)}
-                          >
-                            중지
-                          </button>
-                        ) : (
-                          <button
-                            className="text-xs px-2 py-1 rounded-md bg-primary text-primary-foreground hover:opacity-90"
-                            onClick={() => startTimer(t.id)}
-                          >
-                            시작
-                          </button>
-                        )}
-                        <button
-                          className="text-xs px-2 py-1 rounded-md bg-destructive text-destructive-foreground hover:opacity-90"
-                          onClick={() => removeTimer(t.id)}
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    </div>
-                    <div className="absolute bottom-0 left-0 w-full h-1 rounded-b-xl" style={{ background: t.color }} />
-                  </div>
-                );
-              })}
-            </div>
 
             {!adding && (
-              <div className="mt-4">
+              <div className="my-4 ">
                 <button
                   className="w-full h-12 border-2 border-dashed border-border rounded-md text-sm text-muted-foreground hover:border-primary/50 hover:bg-primary/5"
                   onClick={() => setAdding(true)}
@@ -421,7 +355,8 @@ export default function TimerModal({
                 <div className="flex flex-col gap-2">
                   <label className="text-xs text-muted-foreground">지속 시간: {duration}m</label>
                   <input
-                    className="range" type="range"
+                    className="range"
+                    type="range"
                     min="1"
                     max="60"
                     value={duration}
@@ -431,7 +366,10 @@ export default function TimerModal({
                 <div className="flex items-center gap-2">
                   <button
                     className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground hover:opacity-90 text-sm"
-                    onClick={() => { handleAddTimer(); setAdding(false); }}
+                    onClick={() => {
+                      handleAddTimer();
+                      setAdding(false);
+                    }}
                   >
                     추가
                   </button>
@@ -444,13 +382,60 @@ export default function TimerModal({
                 </div>
               </div>
             )}
+
+            {timers.length === 0 && <p className="text-sm text-muted-foreground">등록된 타이머가 없습니다. 아래에서 추가하세요.</p>}
+            <div className="grid grid-cols-2 gap-3">
+              {timers.map((t) => {
+                const rem = Math.max(0, (t.endTime ?? 0) - now);
+                const m = Math.floor(rem / 60000)
+                  .toString()
+                  .padStart(2, "0");
+                const s = Math.floor((rem % 60000) / 1000)
+                  .toString()
+                  .padStart(2, "0");
+                const isActive = !!t.running;
+                return (
+                  <div
+                    key={t.id}
+                    className={`relative bg-card border border-border rounded-xl p-4 transition hover:shadow-soft hover-lift ${
+                      isActive ? "ring-2 ring-primary shadow-medium" : ""
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-foreground mb-1">{isActive ? `${m}:${s}` : `${t.duration}m`}</div>
+                      <div className="text-xs text-muted-foreground mb-2">{t.label}</div>
+                      <div className="flex items-center justify-center gap-2">
+                        {t.running ? (
+                          <button
+                            className="text-xs px-2 py-1 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                            onClick={() => stopTimer(t.id)}
+                          >
+                            중지
+                          </button>
+                        ) : (
+                          <button
+                            className="text-xs px-2 py-1 rounded-md bg-primary text-primary-foreground hover:opacity-90"
+                            onClick={() => startTimer(t.id)}
+                          >
+                            시작
+                          </button>
+                        )}
+                        <button
+                          className="text-xs px-2 py-1 rounded-md bg-destructive text-destructive-foreground hover:opacity-90"
+                          onClick={() => removeTimer(t.id)}
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    </div>
+                    <div className="absolute bottom-0 left-0 w-full h-1 rounded-b-xl" style={{ background: t.color }} />
+                  </div>
+                );
+              })}
+            </div>
           </section>
         </>
       )}
     </div>
   );
 }
-
-
-
-
