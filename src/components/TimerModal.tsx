@@ -21,7 +21,7 @@ export default function TimerModal({ timers, addTimer, startTimer, stopTimer, re
   const [newTypeName, setNewTypeName] = useState("");
   const [newTypeColor, setNewTypeColor] = useState(colors[0]);
 
-  const [timerLabel, setTimerLabel] = useState(settings.defaultLabel);
+  const [timerLabel, setTimerLabel] = useState("");
   const [timerType, setTimerType] = useState(settings.timerTypes[0]?.name || "");
   const [duration, setDuration] = useState(60); // minutes
   const [now, setNow] = useState(Date.now());
@@ -35,10 +35,6 @@ export default function TimerModal({ timers, addTimer, startTimer, stopTimer, re
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
-
-  useEffect(() => {
-    setTimerLabel(settings.defaultLabel);
-  }, [settings.defaultLabel]);
 
   // Load stats once for the Stats tab
   useEffect(() => {
@@ -62,16 +58,18 @@ export default function TimerModal({ timers, addTimer, startTimer, stopTimer, re
 
   const handleAddTimer = () => {
     if (!timerLabel.trim() || !timerType || duration <= 0) return;
+    // 중복 체크
+    if (timers.some((t) => t.label === timerLabel.trim())) return;
     const color = settings.timerTypes.find((t) => t.name === timerType)?.color || "#333";
     addTimer({
       id: Date.now(),
-      label: timerLabel,
+      label: timerLabel.trim(),
       type: timerType,
       duration,
       running: false,
       color,
     });
-    setTimerLabel(settings.defaultLabel);
+    setTimerLabel("");
     setTimerType(settings.timerTypes[0]?.name || "");
   };
 
@@ -324,16 +322,22 @@ export default function TimerModal({ timers, addTimer, startTimer, stopTimer, re
               </div>
             )}
             {adding && (
-              <div className="mt-4 bg-card border border-border rounded-xl p-4 space-y-3">
+              <div className="my-4 bg-card border border-border rounded-xl p-4 space-y-3">
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs text-muted-foreground">타이머 라벨</label>
+                  <label className="text-xs text-muted-foreground">
+                    타이머 라벨 <span className="text-red-500">*</span>
+                  </label>
                   <input
                     className="px-3 py-2 rounded-md bg-background border border-border focus:outline-none focus:ring-2 focus:ring-ring"
                     type="text"
                     value={timerLabel}
                     onChange={(e) => setTimerLabel(e.target.value)}
-                    placeholder={settings.defaultLabel}
+                    placeholder="타이머 이름을 입력하세요"
                   />
+                  {!timerLabel.trim() && <span className="text-xs text-red-500 mt-1">타이머 이름을 입력하세요.</span>}
+                  {timerLabel.trim() && timers.some((t) => t.label === timerLabel.trim()) && (
+                    <span className="text-xs text-red-500 mt-1">이미 존재하는 이름입니다.</span>
+                  )}
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-xs text-muted-foreground">타입</label>
@@ -366,6 +370,7 @@ export default function TimerModal({ timers, addTimer, startTimer, stopTimer, re
                 <div className="flex items-center gap-2">
                   <button
                     className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground hover:opacity-90 text-sm"
+                    disabled={!timerLabel.trim() || timers.some((t) => t.label === timerLabel.trim())}
                     onClick={() => {
                       handleAddTimer();
                       setAdding(false);

@@ -16,7 +16,6 @@ export interface TimerType {
 }
 
 export interface Settings {
-  defaultLabel: string;
   timerTypes: TimerType[];
   showFloating: boolean;
   enableNotifications: boolean;
