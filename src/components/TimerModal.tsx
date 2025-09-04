@@ -1,6 +1,5 @@
 ﻿import React, { useEffect, useState } from "react";
 import type { Timer, Settings, StatRecord } from "../types";
-import StatsBarChart from "./StatsBarChart";
 declare const chrome: any;
 
 interface Props {
@@ -285,19 +284,83 @@ export default function TimerModal({ timers, addTimer, startTimer, stopTimer, re
           {(() => {
             const nowMs = Date.now();
             const range = { day: 24 * 60 * 60 * 1000, week: 7 * 24 * 60 * 60 * 1000, month: 30 * 24 * 60 * 60 * 1000 }[period];
-            const totals: Record<string, number> = {};
-            records.forEach((r) => {
-              if (nowMs - r.timestamp <= range) {
-                const h = new Date(r.timestamp).getHours();
-                if (h >= startHour && h < endHour) totals[r.label] = (totals[r.label] || 0) + r.duration;
-              }
+            // 기간/시간 필터
+            const filtered = records.filter((r) => {
+              if (!r || typeof r.timestamp !== 'number') return false;
+              if (nowMs - r.timestamp > range) return false;
+              const h = new Date(r.timestamp).getHours();
+              return h >= startHour && h < endHour;
             });
-            const data = {
-              labels: Object.keys(totals),
-              datasets: [{ label: "집중 시간(분)", data: Object.values(totals), backgroundColor: "rgba(34,197,94,0.5)" }],
-            };
-            const options = { indexAxis: "y", responsive: true, plugins: { legend: { display: false }, title: { display: false } } };
-            return <StatsBarChart data={data} options={options} />;
+            // 유형 기준 합산 (type 없으면 '기타')
+            const totalsByType: Record<string, number> = {};
+            filtered.forEach((r) => {
+              const key = (r as any).type || '기타';
+              totalsByType[key] = (totalsByType[key] || 0) + (r.duration || 0);
+            });
+            const typeEntries = Object.entries(totalsByType).sort((a, b) => b[1] - a[1]);
+            const max = Math.max(1, ...typeEntries.map(([, v]) => v));
+            // 유형 색상 매핑
+            const colorOf = (name: string) => settings.timerTypes.find((t) => t.name === name)?.color || '#22c55e';
+            return (
+              <div className="space-y-3">
+                <div className="text-xs text-muted-foreground">집중 시간(분)</div>
+                {typeEntries.length === 0 && (
+                  <div className="text-xs text-muted-foreground">표시할 데이터가 없습니다.</div>
+                )}
+                {typeEntries.map(([name, minutes]) => {
+                  const pct = Math.round((minutes / max) * 100);
+                  const color = colorOf(name);
+                  return (
+                    <div key={name} className="w-full">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-foreground">{name}</span>
+                        <span className="text-xs text-muted-foreground">{Math.round(minutes)}m</span>
+                      </div>
+                      <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-3 rounded-full"
+                          style={{ width: `${pct}%`, backgroundColor: color, transition: 'width 300ms ease' }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                {/* 라벨 TOP 10 */}
+                {(() => {
+                  const totalsByLabel: Record<string, number> = {};
+                  filtered.forEach((r) => {
+                    const key = r.label || '미정';
+                    totalsByLabel[key] = (totalsByLabel[key] || 0) + (r.duration || 0);
+                  });
+                  const labelEntries = Object.entries(totalsByLabel).sort((a, b) => b[1] - a[1]).slice(0, 10);
+                  const maxL = Math.max(1, ...labelEntries.map(([, v]) => v));
+                  return (
+                    <div className="pt-4 space-y-3">
+                      <div className="text-xs text-muted-foreground">라벨 TOP 10</div>
+                      {labelEntries.map(([label, minutes]) => {
+                        const pctL = Math.round((minutes / maxL) * 100);
+                        const typeName = (filtered.find((r) => r.label === label)?.type as string) || '';
+                        const color = colorOf(typeName);
+                        return (
+                          <div key={label} className="w-full">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-medium text-foreground">{label}</span>
+                              <span className="text-xs text-muted-foreground">{Math.round(minutes)}m</span>
+                            </div>
+                            <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className="h-2.5 rounded-full"
+                                style={{ width: `${pctL}%`, backgroundColor: color, transition: 'width 300ms ease' }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            );
           })()}
         </section>
       )}

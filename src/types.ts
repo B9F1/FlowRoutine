@@ -27,4 +27,5 @@ export interface StatRecord {
   label: string;
   duration: number; // minutes
   timestamp: number; // ms since epoch
+  type?: string; // timer type name
 }

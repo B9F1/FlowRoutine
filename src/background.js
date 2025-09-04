@@ -66,6 +66,7 @@ chrome.runtime.onStartup?.addListener(() => {
 });
 
 let timers = [];
+let labelTypeMap = {};
 let settings = {
   defaultLabel: 'work-timer',
   timerTypes: [
@@ -80,17 +81,47 @@ let settings = {
 };
 let currentTabId;
 
-chrome.storage?.local.get(['timers', 'settings'], (data) => {
+chrome.storage?.local.get(['timers', 'settings', 'labelTypeMap', 'stats'], (data) => {
   if (data && Array.isArray(data.timers)) {
     timers = data.timers;
   }
   if (data && data.settings) {
     settings = { ...settings, ...data.settings };
   }
+  if (data && data.labelTypeMap && typeof data.labelTypeMap === 'object') {
+    labelTypeMap = data.labelTypeMap;
+  }
+  // Backfill missing type in existing stats entries where possible
+  try {
+    const stats = Array.isArray(data?.stats) ? data.stats : [];
+    let changed = false;
+    const typeByLabel = { ...labelTypeMap };
+    timers.forEach((t) => {
+      if (t && t.label && t.type) typeByLabel[t.label] = t.type;
+    });
+    const fallbackByLabel = {
+      '1': '학습', '2': '학습', '3': '학습',
+      '11': '업무', '22': '업무', '33': '업무',
+      '111': '브레이크', '222': '브레이크', '333': '브레이크',
+    };
+    stats.forEach((r) => {
+      if (!r || r.type) return;
+      const lbl = r.label;
+      if (!lbl) return;
+      const mapped = typeByLabel[lbl] || fallbackByLabel[lbl];
+      if (mapped) {
+        r.type = mapped;
+        changed = true;
+      }
+    });
+    if (changed) {
+      chrome.storage?.local.set({ stats });
+    }
+  } catch {}
 });
 
 function save() {
-  chrome.storage?.local.set({ timers, settings });
+  chrome.storage?.local.set({ timers, settings, labelTypeMap });
 }
 
 function broadcastTimers() {
@@ -139,6 +170,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message.type === 'addTimer') {
     timers.push(message.timer);
+    if (message.timer && message.timer.label && message.timer.type) {
+      labelTypeMap[message.timer.label] = message.timer.type;
+    }
     save();
     broadcastTimers();
     sendResponse({ timerData: timers });
@@ -177,7 +211,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.storage?.local.get(['stats'], (data) => {
       const stats = Array.isArray(data?.stats) ? data.stats : [];
       if (finished) {
-        stats.push({ label: finished.label, duration: finished.duration, timestamp: Date.now() });
+        stats.push({
+          label: finished.label,
+          duration: finished.duration,
+          timestamp: Date.now(),
+          type: finished.type,
+        });
+        if (finished.label && finished.type) {
+          labelTypeMap[finished.label] = finished.type;
+          save();
+        }
         chrome.storage?.local.set({ stats });
       }
     });
