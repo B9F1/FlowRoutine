@@ -2,7 +2,10 @@
 
 React 기반 루틴 타이머 프로젝트입니다.
 
-![FlowRoutine UI](src/assets/screenshots/screenshot-01.png)
+![FlowRoutine UI](src/assets/screenshots/image-01.png)
+![FlowRoutine UI](src/assets/screenshots/image-02.png)
+
+> **설명:** 위 이미지는 플로팅 타이머와 통계 페이지 UI 예시입니다.
 
 ## 주요 기능 및 진행 상황
 
@@ -12,12 +15,23 @@ React 기반 루틴 타이머 프로젝트입니다.
 - manifest.json, 아이콘, mp3 등 빌드 시 dist로 자동 복사
 - 개인정보 수집/외부 전송 없음 (크롬 저장소만 사용)
 
+### 기술 스택
+
+- React, TypeScript
+- Tailwind CSS
+- Chart.js, react-chartjs-2
+- 크롬 확장 API
+
 ## 최근 변경 사항
 
 - 통계 페이지에 react-chartjs-2 기반 막대 그래프 적용
 - 알림음 mp3 파일(public/assets/sounds/bell_01.mp3) 적용 및 manifest에 web_accessible_resources 등록
 - 빌드 오류(경로, 중괄호 등) 및 타입 오류 수정
 - 확장툴 배포/설치 방법 및 개인정보처리방침 안내 추가
+
+- 타이머 종료 시점 데이터 새로고침 및 알림 개선
+- 불필요한 컴포넌트/파일 제거 및 버전 관리
+- Tailwind CSS 통합 및 UI 컴포넌트 개선
 
 ## 폴더 구조
 
@@ -29,16 +43,24 @@ FlowRoutine/
 │       ├── icons/
 │       └── sounds/
 ├── src/
+│   ├── App.tsx
+│   ├── main.tsx
 │   ├── index.css
-│   ├── index.tsx
+│   ├── background.ts
+│   ├── contentScript.ts
+│   ├── types.ts
 │   ├── components/
+│   │   ├── FloatingTimer.tsx
+│   │   ├── FloatingTimer.css
+│   │   ├── TimerModal.tsx
+│   │   ├── TimerModal.css
 │   │   └── StatsBarChart.tsx
-│   ├── StatsPage.tsx
 │   ├── assets/
-│   │   └── fonts/
-│   │       ├── pretendard.css
-│   │       └── woff2/
-│   ├── types/
+│   │   ├── fonts/
+│   │   │   ├── pretendard.css
+│   │   │   ├── woff/
+│   │   │   └── woff2/
+│   │   └── screenshots/
 │   └── ...
 ├── dist/
 │   └── (빌드 결과물)
@@ -62,6 +84,14 @@ FlowRoutine/
    ```
    - 빌드 결과물은 `dist/` 폴더에 생성됩니다.
    - 크롬 확장툴 등록 시, `dist` 폴더를 지정하면 됩니다.
+
+## 기여 및 개발 가이드
+
+1. 브랜치 전략: 기능별로 `sprintN`, `release-vX.X.X` 브랜치 사용
+2. 커밋 메시지: `feat`, `fix`, `chore`, `docs` 등 Conventional Commits 스타일 권장
+3. 코드 컨벤션: Prettier, ESLint 적용 권장
+4. 주요 컴포넌트/기능은 `src/components` 및 `src/background.ts`, `src/contentScript.ts`에 위치
+5. 테스트 및 빌드 후 dist 폴더로 결과물 확인
 
 ## 크롬 확장툴 배포/설치
 
