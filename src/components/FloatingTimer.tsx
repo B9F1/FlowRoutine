@@ -24,7 +24,7 @@ function getContrastingColor(hex: string) {
 
 interface Props {
   timer: Timer;
-  stopTimer: (id: number) => void;
+  stopTimer: (id: string) => void;
 }
 
 export default function FloatingTimer({ timer, stopTimer }: Props) {
@@ -195,4 +195,3 @@ export default function FloatingTimer({ timer, stopTimer }: Props) {
     </div>
   );
 }
-
