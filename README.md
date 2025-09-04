@@ -1,7 +1,8 @@
-
 # FlowRoutine
 
-크롬 확장툴 및 React 기반 UI 프로젝트입니다.
+React 기반 루틴 타이머 프로젝트입니다.
+
+![FlowRoutine UI](src/assets/screenshots/screenshot-01.png)
 
 ## 주요 기능 및 진행 상황
 
