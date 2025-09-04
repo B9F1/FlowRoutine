@@ -93,7 +93,7 @@ export default function TimerModal({
             <span className="w-4 h-4 rounded-full bg-primary block" />
           </div>
           <div>
-            <h1 className="font-bold text-foreground text-sm">FlowTimer</h1>
+            <h1 className="font-bold text-foreground text-sm">FlowRoutine</h1>
             <p className="text-xs text-muted-foreground">Focus & Flow</p>
           </div>
         </div>
@@ -149,7 +149,7 @@ export default function TimerModal({
                   style={{ backgroundColor: t.color }}
                 >
                   {t.name}
-                  <button className="opacity-80 hover:opacity-100" onClick={() => handleRemoveType(t.name)}>횞</button>
+                  <button className="opacity-80 hover:opacity-100" onClick={() => handleRemoveType(t.name)}>x</button>
                 </span>
               ))}
             </div>
