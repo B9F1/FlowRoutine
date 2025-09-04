@@ -1,5 +1,17 @@
+// globalThis.endedGuard 타입 선언
+declare global {
+  interface GlobalThis {
+    endedGuard?: Map<string, number>;
+  }
+}
+
 import type { Timer, Settings } from "./types";
 declare const chrome: any;
+
+declare global {
+  // eslint-disable-next-line no-var
+  var endedGuard: Map<string, number> | undefined;
+}
 
 let timers: Timer[] = [];
 let settings: Settings = {
@@ -70,7 +82,16 @@ chrome.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: 
       broadcastTimers();
       sendResponse({ timerData: timers });
       break;
-    case "timerEnded":
+    case "timerEnded": {
+      // 중복 알림 방지: endedGuard 사용
+      if (!endedGuard) endedGuard = new Map();
+      const guard = endedGuard!;
+      const now = Date.now();
+      if (guard.get(message.id) && now - guard.get(message.id)! < 3000) {
+        sendResponse({ timerData: timers });
+        break;
+      }
+      guard.set(message.id, now);
       timers = timers.map((t) => (t.id === message.id ? { ...t, running: false, endTime: undefined } : t));
       save();
       broadcastTimers();
@@ -78,7 +99,7 @@ chrome.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: 
       chrome.storage?.local.get(["stats"], (data: any) => {
         const stats = Array.isArray(data?.stats) ? data.stats : [];
         if (finished) {
-          stats.push({ label: finished.label, duration: finished.duration, timestamp: Date.now() });
+          stats.push({ label: finished.label, duration: finished.duration, timestamp: now });
           chrome.storage?.local.set({ stats });
         }
       });
@@ -93,19 +114,14 @@ chrome.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: 
       if (settings.enableSound) {
         chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs: any[]) => {
           tabs.forEach((tab) => {
-            if (tab.id !== undefined) {
-              chrome.tabs.sendMessage(tab.id, {
-                type: "playSound",
-                volume: settings.volume,
-              });
-            }
+            // 실제 알림 사운드 처리 코드 필요시 여기에 작성
           });
         });
-        // Also notify extension views (e.g., popup) to play sound if open
         chrome.runtime.sendMessage({ type: "playSound", volume: settings.volume });
       }
       sendResponse({ timerData: timers });
       break;
+    }
     case "moveTimer":
       timers = timers.map((t) => (t.id === message.id ? { ...t, x: message.x, y: message.y } : t));
       save();
