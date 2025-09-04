@@ -57,12 +57,14 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log('FlowRoutine background script loaded');
   registerContentScript();
   initializeActiveTab();
+  startTimerTick();
 });
 
 // Also register on startup to handle service worker restarts.
 chrome.runtime.onStartup?.addListener(() => {
   registerContentScript();
   initializeActiveTab();
+  startTimerTick();
 });
 
 let timers = [];
@@ -82,6 +84,80 @@ let settings = {
 let currentTabId;
 let statsRecords = [];
 const endedGuard = new Map(); // id -> last ended timestamp
+
+function handleTimerEnded(messageOrTimer) {
+  const nowTs = Date.now();
+  const idKey = String(messageOrTimer.id);
+  const last = endedGuard.get(idKey);
+  if (last && nowTs - last < 10000) {
+    return false; // duplicate within window
+  }
+  endedGuard.set(idKey, nowTs);
+  // prune occasionally
+  if (endedGuard.size > 1000) {
+    const cutoff = nowTs - 600000;
+    for (const [k, v] of endedGuard) if (v < cutoff) endedGuard.delete(k);
+  }
+  timers = timers.map(t => String(t.id) === idKey ? { ...t, running: false, endTime: undefined } : t);
+  save();
+  broadcastTimers();
+  const finished = timers.find(t => String(t.id) === idKey) || messageOrTimer;
+  if (finished) {
+    const rec = {
+      label: String(finished.label || '').trim(),
+      duration: Number(finished.duration || 0),
+      timestamp: nowTs,
+      type: finished.type ? String(finished.type).trim() : finished.type,
+    };
+    // de-dup by label within 2s window
+    let isDup = false;
+    for (let i = statsRecords.length - 1; i >= 0; i--) {
+      const r = statsRecords[i];
+      if (r.label === rec.label && (nowTs - Number(r.timestamp)) < 2000) { isDup = true; break; }
+      if ((nowTs - Number(r.timestamp)) >= 2000) break;
+    }
+    if (!isDup) statsRecords.push(rec);
+    if (rec.label && rec.type) {
+      labelTypeMap[rec.label] = rec.type;
+      save();
+    }
+    chrome.storage?.local.set({ stats: statsRecords });
+  }
+  if (settings.enableNotifications) {
+    try {
+      chrome.notifications?.create(`timer-${idKey}-${nowTs}-${Math.random().toString(36).slice(2,6)}`, {
+        type: 'basic',
+        iconUrl: chrome.runtime.getURL('assets/icons/logo-FlowRoutine.png'),
+        title: '타이머 종료',
+        message: `${messageOrTimer.label} 타이머가 종료되었습니다.`,
+      });
+    } catch {}
+  }
+  if (settings.enableSound) {
+    try {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        tabs.forEach((tab) => {
+          if (tab.id) {
+            chrome.tabs.sendMessage(tab.id, { type: 'playSound', volume: settings.volume });
+          }
+        });
+      });
+    } catch {}
+  }
+  return true;
+}
+
+function startTimerTick() {
+  try {
+    setInterval(() => {
+      const now = Date.now();
+      const due = timers.filter(t => t.running && typeof t.endTime === 'number' && t.endTime <= now);
+      if (due.length) {
+        due.forEach((t) => handleTimerEnded(t));
+      }
+    }, 1000);
+  } catch {}
+}
 
 chrome.storage?.local.get(['timers', 'settings', 'labelTypeMap', 'stats'], (data) => {
   if (data && Array.isArray(data.timers)) {
@@ -218,64 +294,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.type === 'timerEnded') {
-    const nowTs = Date.now();
-    const idKey = String(message.id);
-    const last = endedGuard.get(idKey);
-    if (last && nowTs - last < 2000) {
-      // duplicate end within 2s window; ignore
-      sendResponse({ timerData: timers });
-      return true;
-    }
-    endedGuard.set(idKey, nowTs);
-    // occasionally prune old entries
-    if (endedGuard.size > 1000) {
-      const cutoff = nowTs - 600000; // 10 minutes
-      for (const [k, v] of endedGuard) if (v < cutoff) endedGuard.delete(k);
-    }
-    timers = timers.map(t => String(t.id) === String(message.id) ? { ...t, running: false, endTime: undefined } : t);
-    save();
-    broadcastTimers();
-    const finished = timers.find(t => String(t.id) === String(message.id));
-    if (finished) {
-      const rec = {
-        label: String(finished.label || '').trim(),
-        duration: Number(finished.duration || 0),
-        timestamp: nowTs,
-        type: finished.type ? String(finished.type).trim() : finished.type,
-      };
-      // de-dup by label within 2s window
-      let isDup = false;
-      for (let i = statsRecords.length - 1; i >= 0; i--) {
-        const r = statsRecords[i];
-        if (r.label === rec.label && (nowTs - Number(r.timestamp)) < 2000) { isDup = true; break; }
-        if ((nowTs - Number(r.timestamp)) >= 2000) break; // early exit on older entries
-      }
-      if (!isDup) {
-        statsRecords.push(rec);
-      }
-      if (rec.label && rec.type) {
-        labelTypeMap[rec.label] = rec.type;
-        save();
-      }
-      chrome.storage?.local.set({ stats: statsRecords });
-    }
-    if (settings.enableNotifications) {
-      chrome.notifications?.create(`timer-${String(message.id)}`, {
-        type: 'basic',
-        iconUrl: chrome.runtime.getURL('assets/icons/logo-FlowRoutine.png'),
-        title: '타이머 종료',
-        message: `${message.label} 타이머가 종료되었습니다.`,
-      });
-    }
-    if (settings.enableSound) {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        tabs.forEach((tab) => {
-          if (tab.id) {
-            chrome.tabs.sendMessage(tab.id, { type: 'playSound', volume: settings.volume });
-          }
-        });
-      });
-    }
+    handleTimerEnded({ id: message.id, label: message.label });
     sendResponse({ timerData: timers });
     return true;
   }

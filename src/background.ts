@@ -92,10 +92,11 @@ chrome.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: 
         break;
       }
       guard.set(message.id, now);
-      timers = timers.map((t) => (t.id === message.id ? { ...t, running: false, endTime: undefined } : t));
+      // 종료된 타이머는 배열에서 완전히 제거
+      const finished = timers.find((t) => t.id === message.id);
+      timers = timers.filter((t) => t.id !== message.id);
       save();
       broadcastTimers();
-      const finished = timers.find((t) => t.id === message.id);
       chrome.storage?.local.get(["stats"], (data: any) => {
         const stats = Array.isArray(data?.stats) ? data.stats : [];
         if (finished) {
@@ -103,15 +104,15 @@ chrome.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: 
           chrome.storage?.local.set({ stats });
         }
       });
-      if (settings.enableNotifications) {
+      if (settings.enableNotifications && finished) {
         chrome.notifications?.create(`timer-${message.id}`, {
           type: "basic",
           iconUrl: chrome.runtime.getURL("assets/icons/logo-FlowRoutine.png"),
           title: "타이머 종료",
-          message: `${message.label} 타이머가 종료되었습니다.`,
+          message: `${finished.label} 타이머가 종료되었습니다.`,
         });
       }
-      if (settings.enableSound) {
+      if (settings.enableSound && finished) {
         chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs: any[]) => {
           tabs.forEach((tab) => {
             // 실제 알림 사운드 처리 코드 필요시 여기에 작성

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import TimerModal from './components/TimerModal';
-import FloatingTimer from './components/FloatingTimer';
-import type { Timer, Settings } from './types';
+import React, { useEffect, useState } from "react";
+import TimerModal from "./components/TimerModal";
+import FloatingTimer from "./components/FloatingTimer";
+import type { Timer, Settings } from "./types";
 declare const chrome: any;
 
 function App() {
@@ -10,28 +10,40 @@ function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
 
   useEffect(() => {
-    chrome.runtime.sendMessage({ type: 'getTimers' }, (response: any) => {
+    chrome.runtime.sendMessage({ type: "getTimers" }, (response: any) => {
       if (response && Array.isArray(response.timerData)) {
         setTimers(response.timerData);
       } else {
         setTimers([]);
       }
     });
-    chrome.runtime.sendMessage({ type: 'getSettings' }, (res: any) => {
+    chrome.runtime.sendMessage({ type: "getSettings" }, (res: any) => {
       setSettings(res);
     });
     const listener = (message: any) => {
-      if (message?.type === 'playSound') {
+      if (message?.type === "playSound") {
         try {
-          const audio = new Audio(chrome.runtime.getURL('assets/sounds/bell_01.mp3'));
+          const audio = new Audio(chrome.runtime.getURL("assets/sounds/bell_01.mp3"));
           audio.volume = Math.max(0, Math.min(1, Number(message.volume ?? 1)));
           audio.play().catch(() => {});
         } catch {}
       }
+      // 타이머 종료 시점에 강제 데이터 새로고침
+      if (message?.type === "timerEnded") {
+        chrome.runtime.sendMessage({ type: "getTimers" }, (response: any) => {
+          if (response && Array.isArray(response.timerData)) {
+            setTimers(response.timerData);
+          } else {
+            setTimers([]);
+          }
+        });
+      }
     };
     chrome.runtime.onMessage.addListener(listener);
     return () => {
-      try { chrome.runtime.onMessage.removeListener(listener); } catch {}
+      try {
+        chrome.runtime.onMessage.removeListener(listener);
+      } catch {}
     };
   }, []);
 
@@ -45,30 +57,30 @@ function App() {
     });
 
   const addTimer = (timer: Timer) => {
-    send({ type: 'addTimer', timer });
+    send({ type: "addTimer", timer });
     // background에 타이머 데이터 동기화
-    chrome.runtime.sendMessage({ type: 'SET_TIMER', data: timer }, () => {});
+    chrome.runtime.sendMessage({ type: "SET_TIMER", data: timer }, () => {});
     // background.js에 SHOW_TIMER 메시지 요청 (MV3 권장 방식)
-    chrome.runtime.sendMessage({ type: 'SHOW_TIMER', timer });
+    chrome.runtime.sendMessage({ type: "SHOW_TIMER", timer });
   };
   const startTimer = (id: string) => {
-    send({ type: 'startTimer', id });
+    send({ type: "startTimer", id });
     const t = timers.find((t) => t.id === id);
-    if (t) chrome.runtime.sendMessage({ type: 'SET_TIMER', data: { ...t, running: true } }, () => {});
+    if (t) chrome.runtime.sendMessage({ type: "SET_TIMER", data: { ...t, running: true } }, () => {});
   };
   const stopTimer = (id: string) => {
-    send({ type: 'stopTimer', id });
+    send({ type: "stopTimer", id });
     const t = timers.find((t) => t.id === id);
-    if (t) chrome.runtime.sendMessage({ type: 'SET_TIMER', data: { ...t, running: false } }, () => {});
+    if (t) chrome.runtime.sendMessage({ type: "SET_TIMER", data: { ...t, running: false } }, () => {});
   };
   const removeTimer = (id: string) => {
-    send({ type: 'removeTimer', id });
+    send({ type: "removeTimer", id });
     // background에 타이머 데이터 초기화
-    chrome.runtime.sendMessage({ type: 'SET_TIMER', data: null }, () => {});
+    chrome.runtime.sendMessage({ type: "SET_TIMER", data: null }, () => {});
   };
 
   const updateSettings = (updates: Partial<Settings>) => {
-    chrome.runtime.sendMessage({ type: 'updateSettings', updates }, (res: any) => {
+    chrome.runtime.sendMessage({ type: "updateSettings", updates }, (res: any) => {
       setSettings(res);
     });
   };
