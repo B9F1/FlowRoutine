@@ -291,16 +291,21 @@ export default function TimerModal({ timers, addTimer, startTimer, stopTimer, re
               const h = new Date(r.timestamp).getHours();
               return h >= startHour && h < endHour;
             });
-            // 유형 기준 합산 (type 없으면 '기타')
+            // 유형 기준 합산 (type 없으면 '기타'), 공백 정규화
             const totalsByType: Record<string, number> = {};
             filtered.forEach((r) => {
-              const key = (r as any).type || '기타';
+              const raw = (r as any).type as string | undefined;
+              const key = (raw ? raw.trim() : '') || '기타';
               totalsByType[key] = (totalsByType[key] || 0) + (r.duration || 0);
             });
             const typeEntries = Object.entries(totalsByType).sort((a, b) => b[1] - a[1]);
             const max = Math.max(1, ...typeEntries.map(([, v]) => v));
             // 유형 색상 매핑
-            const colorOf = (name: string) => settings.timerTypes.find((t) => t.name === name)?.color || '#22c55e';
+            const colorOf = (name: string) => {
+              const n = (name || '').trim();
+              const found = settings.timerTypes.find((t) => (t.name || '').trim() === n);
+              return found?.color || '#22c55e';
+            };
             return (
               <div className="space-y-3">
                 <div className="text-xs text-muted-foreground">집중 시간(분)</div>
@@ -329,7 +334,7 @@ export default function TimerModal({ timers, addTimer, startTimer, stopTimer, re
                 {(() => {
                   const totalsByLabel: Record<string, number> = {};
                   filtered.forEach((r) => {
-                    const key = r.label || '미정';
+                    const key = (r.label || '미정').trim();
                     totalsByLabel[key] = (totalsByLabel[key] || 0) + (r.duration || 0);
                   });
                   const labelEntries = Object.entries(totalsByLabel).sort((a, b) => b[1] - a[1]).slice(0, 10);
@@ -339,8 +344,8 @@ export default function TimerModal({ timers, addTimer, startTimer, stopTimer, re
                       <div className="text-xs text-muted-foreground">라벨 TOP 10</div>
                       {labelEntries.map(([label, minutes]) => {
                         const pctL = Math.round((minutes / maxL) * 100);
-                        const typeName = (filtered.find((r) => r.label === label)?.type as string) || '';
-                        const color = colorOf(typeName);
+                        const typeNameRaw = (filtered.find((r) => (r.label || '').trim() === label)?.type as string) || '';
+                        const color = colorOf(typeNameRaw);
                         return (
                           <div key={label} className="w-full">
                             <div className="flex items-center justify-between mb-1">

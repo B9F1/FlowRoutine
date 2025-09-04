@@ -80,6 +80,8 @@ let settings = {
   volume: 1,
 };
 let currentTabId;
+let statsRecords = [];
+const endedGuard = new Map(); // id -> last ended timestamp
 
 chrome.storage?.local.get(['timers', 'settings', 'labelTypeMap', 'stats'], (data) => {
   if (data && Array.isArray(data.timers)) {
@@ -89,11 +91,16 @@ chrome.storage?.local.get(['timers', 'settings', 'labelTypeMap', 'stats'], (data
     settings = { ...settings, ...data.settings };
   }
   if (data && data.labelTypeMap && typeof data.labelTypeMap === 'object') {
-    labelTypeMap = data.labelTypeMap;
+    labelTypeMap = {};
+    Object.entries(data.labelTypeMap).forEach(([k, v]) => {
+      const key = String(k || '').trim();
+      const val = typeof v === 'string' ? v.trim() : v;
+      if (key && val) labelTypeMap[key] = val;
+    });
   }
   // Backfill missing type in existing stats entries where possible
   try {
-    const stats = Array.isArray(data?.stats) ? data.stats : [];
+    let statsLoaded = Array.isArray(data?.stats) ? data.stats : [];
     let changed = false;
     const typeByLabel = { ...labelTypeMap };
     timers.forEach((t) => {
@@ -104,18 +111,21 @@ chrome.storage?.local.get(['timers', 'settings', 'labelTypeMap', 'stats'], (data
       '11': '업무', '22': '업무', '33': '업무',
       '111': '브레이크', '222': '브레이크', '333': '브레이크',
     };
-    stats.forEach((r) => {
-      if (!r || r.type) return;
-      const lbl = r.label;
-      if (!lbl) return;
-      const mapped = typeByLabel[lbl] || fallbackByLabel[lbl];
-      if (mapped) {
-        r.type = mapped;
-        changed = true;
+    statsLoaded.forEach((r) => {
+      if (!r) return;
+      if (typeof r.label === 'string') r.label = r.label.trim();
+      if (typeof r.type === 'string') r.type = r.type.trim();
+      if (!r.type && r.label) {
+        const mapped = typeByLabel[r.label] || fallbackByLabel[r.label];
+        if (mapped) {
+          r.type = mapped;
+          changed = true;
+        }
       }
     });
+    statsRecords = statsLoaded;
     if (changed) {
-      chrome.storage?.local.set({ stats });
+      chrome.storage?.local.set({ stats: statsRecords, labelTypeMap });
     }
   } catch {}
 });
@@ -171,7 +181,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'addTimer') {
     timers.push(message.timer);
     if (message.timer && message.timer.label && message.timer.type) {
-      labelTypeMap[message.timer.label] = message.timer.type;
+      const lbl = String(message.timer.label).trim();
+      const typ = String(message.timer.type).trim();
+      if (lbl && typ) labelTypeMap[lbl] = typ;
     }
     save();
     broadcastTimers();
@@ -191,6 +203,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message.type === 'startTimer') {
     timers = timers.map(t => String(t.id) === String(message.id) ? { ...t, running: true, endTime: Date.now() + t.duration * 60 * 1000 } : t);
+    // clear end guard for this id when starting again
+    try { endedGuard.delete(String(message.id)); } catch {}
     save();
     broadcastTimers();
     sendResponse({ timerData: timers });
@@ -204,26 +218,47 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.type === 'timerEnded') {
+    const nowTs = Date.now();
+    const idKey = String(message.id);
+    const last = endedGuard.get(idKey);
+    if (last && nowTs - last < 2000) {
+      // duplicate end within 2s window; ignore
+      sendResponse({ timerData: timers });
+      return true;
+    }
+    endedGuard.set(idKey, nowTs);
+    // occasionally prune old entries
+    if (endedGuard.size > 1000) {
+      const cutoff = nowTs - 600000; // 10 minutes
+      for (const [k, v] of endedGuard) if (v < cutoff) endedGuard.delete(k);
+    }
     timers = timers.map(t => String(t.id) === String(message.id) ? { ...t, running: false, endTime: undefined } : t);
     save();
     broadcastTimers();
     const finished = timers.find(t => String(t.id) === String(message.id));
-    chrome.storage?.local.get(['stats'], (data) => {
-      const stats = Array.isArray(data?.stats) ? data.stats : [];
-      if (finished) {
-        stats.push({
-          label: finished.label,
-          duration: finished.duration,
-          timestamp: Date.now(),
-          type: finished.type,
-        });
-        if (finished.label && finished.type) {
-          labelTypeMap[finished.label] = finished.type;
-          save();
-        }
-        chrome.storage?.local.set({ stats });
+    if (finished) {
+      const rec = {
+        label: String(finished.label || '').trim(),
+        duration: Number(finished.duration || 0),
+        timestamp: nowTs,
+        type: finished.type ? String(finished.type).trim() : finished.type,
+      };
+      // de-dup by label within 2s window
+      let isDup = false;
+      for (let i = statsRecords.length - 1; i >= 0; i--) {
+        const r = statsRecords[i];
+        if (r.label === rec.label && (nowTs - Number(r.timestamp)) < 2000) { isDup = true; break; }
+        if ((nowTs - Number(r.timestamp)) >= 2000) break; // early exit on older entries
       }
-    });
+      if (!isDup) {
+        statsRecords.push(rec);
+      }
+      if (rec.label && rec.type) {
+        labelTypeMap[rec.label] = rec.type;
+        save();
+      }
+      chrome.storage?.local.set({ stats: statsRecords });
+    }
     if (settings.enableNotifications) {
       chrome.notifications?.create(`timer-${String(message.id)}`, {
         type: 'basic',
