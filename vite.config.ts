@@ -8,8 +8,7 @@ export default defineConfig({
       input: {
         main: 'index.html',
         background: 'src/background.js',
-        contentScript: 'src/contentScript.js',
-        statistics: 'statistics.html'
+        contentScript: 'src/contentScript.js'
       },
       output: {
         entryFileNames: '[name].js'

@@ -1,5 +1,5 @@
 export interface Timer {
-  id: number;
+  id: string;
   label: string;
   type: string;
   duration: number; // minutes
@@ -16,7 +16,6 @@ export interface TimerType {
 }
 
 export interface Settings {
-  defaultLabel: string;
   timerTypes: TimerType[];
   showFloating: boolean;
   enableNotifications: boolean;
@@ -28,4 +27,5 @@ export interface StatRecord {
   label: string;
   duration: number; // minutes
   timestamp: number; // ms since epoch
+  type?: string; // timer type name
 }

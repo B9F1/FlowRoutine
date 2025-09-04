@@ -36,16 +36,16 @@ if (!window.flowRoutineInitialized) {
 
   function render(timers) {
     Object.keys(displays).forEach((id) => {
-      if (!timers.find((t) => t.id === Number(id))) {
-        const d = displays[Number(id)];
+      if (!timers.find((t) => String(t.id) === id)) {
+        const d = displays[id];
         clearInterval(d.interval);
         d.el.remove();
-        delete displays[Number(id)];
+        delete displays[id];
       }
     });
 
     timers.forEach((timer, index) => {
-      let display = displays[timer.id];
+      let display = displays[String(timer.id)];
       if (display) {
         if (typeof timer.x === 'number' && typeof timer.y === 'number') {
           display.el.style.left = `${timer.x}px`;
@@ -254,7 +254,7 @@ if (!window.flowRoutineInitialized) {
           chrome.runtime.sendMessage({ type: 'moveTimer', id: timer.id, x, y });
         });
 
-        display = displays[timer.id] = { el, interval: 0, progress: fg, timeEl: textEl };
+        display = (displays[String(timer.id)] = { el, interval: 0, progress: fg, timeEl: textEl });
       }
 
       const update = () => {

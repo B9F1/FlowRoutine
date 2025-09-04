@@ -1,307 +1,514 @@
-import React, { useEffect, useState } from 'react';
-import './TimerModal.css';
-import type { Timer, Settings, TimerType } from '../types';
+﻿import React, { useEffect, useState } from "react";
+import type { Timer, Settings, StatRecord } from "../types";
 declare const chrome: any;
 
 interface Props {
   timers: Timer[];
   addTimer: (timer: Timer) => void;
-  startTimer: (id: number) => void;
-  stopTimer: (id: number) => void;
-  removeTimer: (id: number) => void;
+  startTimer: (id: string) => void;
+  stopTimer: (id: string) => void;
+  removeTimer: (id: string) => void;
   onClose: () => void;
   settings: Settings;
   updateSettings: (updates: Partial<Settings>) => void;
 }
 
-export default function TimerModal({
-  timers,
-  addTimer,
-  startTimer,
-  stopTimer,
-  removeTimer,
-  onClose,
-  settings,
-  updateSettings,
-}: Props) {
-  const colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#1abc9c', '#3498db', '#9b59b6', '#34495e'];
+export default function TimerModal({ timers, addTimer, startTimer, stopTimer, removeTimer, onClose, settings, updateSettings }: Props) {
+  const colors = ["#e74c3c", "#e67e22", "#f1c40f", "#2ecc71", "#1abc9c", "#3498db", "#9b59b6", "#34495e"];
 
-  const [activeTab, setActiveTab] = useState<'list' | 'settings'>('list');
-  const [newTypeName, setNewTypeName] = useState('');
+  const [activeTab, setActiveTab] = useState<"list" | "settings" | "stats">("list");
+  const [newTypeName, setNewTypeName] = useState("");
   const [newTypeColor, setNewTypeColor] = useState(colors[0]);
 
-  const [timerLabel, setTimerLabel] = useState(settings.defaultLabel);
-  const [timerType, setTimerType] = useState(settings.timerTypes[0]?.name || '');
-  const [duration, setDuration] = useState(60);
+  const [timerLabel, setTimerLabel] = useState("");
+  const [timerType, setTimerType] = useState(settings.timerTypes[0]?.name || "");
+  const [duration, setDuration] = useState(60); // minutes
   const [now, setNow] = useState(Date.now());
+  const [adding, setAdding] = useState(false);
+  const [records, setRecords] = useState<StatRecord[]>([]);
+  const [period, setPeriod] = useState<"day" | "week" | "month">("day");
+  const [startHour, setStartHour] = useState(0);
+  const [endHour, setEndHour] = useState(24);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
+  // Load stats once for the Stats tab
   useEffect(() => {
-    setTimerLabel(settings.defaultLabel);
-  }, [settings.defaultLabel]);
+    chrome.storage?.local.get(["stats"], (data: any) => {
+      if (Array.isArray(data?.stats)) setRecords(data.stats as StatRecord[]);
+    });
+  }, []);
 
   const handleAddType = () => {
     if (!newTypeName.trim()) return;
     const types = [...settings.timerTypes, { name: newTypeName, color: newTypeColor }];
     updateSettings({ timerTypes: types });
-    setNewTypeName('');
+    setNewTypeName("");
   };
 
   const handleRemoveType = (name: string) => {
     const types = settings.timerTypes.filter((t) => t.name !== name);
     updateSettings({ timerTypes: types });
-    if (timerType === name) {
-      setTimerType('');
-    }
+    if (timerType === name) setTimerType("");
   };
 
   const handleAddTimer = () => {
-    if (!timerLabel.trim() || !timerType || duration <= 0) {
-      return;
-    }
-    const color = settings.timerTypes.find((t) => t.name === timerType)?.color || '#333';
+    if (!timerLabel.trim() || !timerType || duration <= 0) return;
+    // 중복 체크
+    if (timers.some((t) => t.label === timerLabel.trim())) return;
+    const color = settings.timerTypes.find((t) => t.name === timerType)?.color || "#333";
     addTimer({
-      id: Date.now(),
-      label: timerLabel,
+      id: (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`),
+      label: timerLabel.trim(),
       type: timerType,
       duration,
       running: false,
       color,
     });
-    setTimerLabel(settings.defaultLabel);
-    setTimerType(settings.timerTypes[0]?.name || '');
+    setTimerLabel("");
+    setTimerType(settings.timerTypes[0]?.name || "");
   };
 
   return (
-    <div className="timer-modal">
-      <header className="modal-header">
-        <h1>FlowRoutine</h1>
-        <button className="close" onClick={onClose}>
-          ×
+    <div className="w-[360px] h-[600px] bg-background border border-border rounded-none shadow-strong overflow-hidden">
+      {/* Header */}
+      <div className="h-16 bg-card border-b border-border flex items-center justify-between px-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <span className="w-4 h-4 rounded-full bg-primary block" />
+          </div>
+          <div>
+            <h1 className="font-bold text-foreground text-sm">FlowRoutine</h1>
+            <p className="text-xs text-muted-foreground">Focus & Flow</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="w-full h-12 bg-card/50 border-b border-border p-1 flex">
+        <button
+          className={`flex-1 text-xs rounded-md px-3 py-1.5 transition data-[active=true]:bg-background data-[active=true]:shadow-sm ${
+            activeTab === "list" ? "bg-background shadow-sm" : "text-muted-foreground hover:bg-muted/40"
+          }`}
+          data-active={activeTab === "list"}
+          onClick={() => setActiveTab("list")}
+        >
+          타이머 목록
         </button>
-        <nav className="tab-nav">
-          <button
-            className={`tab ${activeTab === 'list' ? 'active' : ''}`}
-            onClick={() => setActiveTab('list')}
-          >
-            타이머 목록
-          </button>
-          <button
-            className={`tab ${activeTab === 'settings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('settings')}
-          >
-            설정
-          </button>
-          <button
-            className="tab"
-            onClick={() =>
-              chrome.tabs.create({
-                url: chrome.runtime.getURL('statistics.html'),
-              })
-            }
-          >
-            통계 보기
-          </button>
-        </nav>
-      </header>
+        <button
+          className={`flex-1 text-xs rounded-md px-3 py-1.5 transition data-[active=true]:bg-background data-[active=true]:shadow-sm ${
+            activeTab === "settings" ? "bg-background shadow-sm" : "text-muted-foreground hover:bg-muted/40"
+          }`}
+          data-active={activeTab === "settings"}
+          onClick={() => setActiveTab("settings")}
+        >
+          설정
+        </button>
+        <button
+          className={`flex-1 text-xs rounded-md px-3 py-1.5 transition ${
+            activeTab === "stats" ? "bg-background shadow-sm" : "text-muted-foreground hover:bg-muted/40"
+          }`}
+          onClick={() => setActiveTab("stats")}
+        >
+          통계
+        </button>
+      </div>
 
-      {activeTab === 'settings' && (
+      {/* Settings */}
+      {activeTab === "settings" && (
         <>
-          <section className="section">
-            <h2>타이머 타입 관리</h2>
-            <div className="field">
-              <label>현재 타이머 타입</label>
-              <div className="current-types">
-                {settings.timerTypes.map((t) => (
-                  <span
-                    key={t.name}
-                    className="current-type"
-                    style={{ backgroundColor: t.color }}
-                  >
-                    {t.name}
-                    <button
-                      className="delete"
-                      onClick={() => handleRemoveType(t.name)}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
+          <section className="h-[calc(100%-7rem)] p-4 overflow-y-auto space-y-3">
+            <h2 className="text-sm font-semibold text-foreground">기본 타이머 관리</h2>
+            <div className="flex flex-wrap gap-2">
+              {settings.timerTypes.map((t) => (
+                <span
+                  key={t.name}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs text-white"
+                  style={{ backgroundColor: t.color }}
+                >
+                  {t.name}
+                  <button className="opacity-80 hover:opacity-100" onClick={() => handleRemoveType(t.name)}>
+                    x
+                  </button>
+                </span>
+              ))}
             </div>
-            <div className="field">
-              <label>새 타이머 타입 추가</label>
-              <input
-                type="text"
-                value={newTypeName}
-                onChange={(e) => setNewTypeName(e.target.value)}
-                placeholder="타이머 타입 이름을 선택하세요"
-              />
-              <div className="color-picker">
-                {colors.map((color) => (
-                  <span
-                    key={color}
-                    className={`color ${newTypeColor === color ? 'selected' : ''}`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => setNewTypeColor(color)}
-                  />
-                ))}
-              </div>
-              <button className="primary" onClick={handleAddType}>
-                + 타입 추가
-              </button>
-            </div>
-          </section>
 
-          <section className="section">
-            <h2>기본 설정</h2>
-            <div className="field">
-              <label>기본 타이머 라벨</label>
-              <input
-                type="text"
-                value={settings.defaultLabel}
-                onChange={(e) => updateSettings({ defaultLabel: e.target.value })}
-              />
-            </div>
-            <div className="field">
-              <label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-2 col-span-2">
+                <label className="text-xs text-muted-foreground">새 유형 이름</label>
                 <input
+                  className="px-3 py-2 rounded-md bg-background border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+                  type="text"
+                  value={newTypeName}
+                  onChange={(e) => setNewTypeName(e.target.value)}
+                  placeholder="ex) Focus"
+                />
+              </div>
+              <div className="flex flex-col gap-2 col-span-2">
+                <label className="text-xs text-muted-foreground">색상 선택</label>
+                <div className="flex flex-wrap gap-2">
+                  {colors.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      className={`w-6 h-6 rounded-full border ${newTypeColor === c ? "ring-2 ring-ring" : ""}`}
+                      style={{ backgroundColor: c }}
+                      onClick={() => setNewTypeColor(c)}
+                      aria-label={`color ${c}`}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="col-span-2">
+                <button
+                  className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground hover:opacity-90 text-sm"
+                  onClick={handleAddType}
+                >
+                  유형 추가
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-sm">플로팅 타이머 표시</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  id="showFloating"
                   type="checkbox"
+                  className="sr-only peer"
                   checked={settings.showFloating}
                   onChange={(e) => updateSettings({ showFloating: e.target.checked })}
-                />{' '}
-                화면에 타이머 보이기
-              </label>
-            </div>
-            <div className="field">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={settings.enableNotifications}
-                  onChange={(e) =>
-                    updateSettings({ enableNotifications: e.target.checked })
-                  }
-                />{' '}
-                시스템 알림 전송
-              </label>
-            </div>
-            <div className="field">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={settings.enableSound}
-                  onChange={(e) =>
-                    updateSettings({ enableSound: e.target.checked })
-                  }
-                />{' '}
-                종료 알림 소리
-              </label>
-              {settings.enableSound && (
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={settings.volume}
-                  onChange={(e) =>
-                    updateSettings({ volume: Number(e.target.value) })
-                  }
                 />
+                <div className="w-10 h-6 bg-muted rounded-full peer-checked:bg-primary transition" />
+                <span className="absolute left-1 top-1 w-4 h-4 bg-background rounded-full transition peer-checked:translate-x-4" />
+              </label>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">알림 보내기</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  id="enableNotifications"
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={settings.enableNotifications}
+                  onChange={(e) => updateSettings({ enableNotifications: e.target.checked })}
+                />
+                <div className="w-10 h-6 bg-muted rounded-full peer-checked:bg-primary transition" />
+                <span className="absolute left-1 top-1 w-4 h-4 bg-background rounded-full transition peer-checked:translate-x-4" />
+              </label>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">종료 소리</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    id="enableSound"
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={settings.enableSound}
+                    onChange={(e) => updateSettings({ enableSound: e.target.checked })}
+                  />
+                  <div className="w-10 h-6 bg-muted rounded-full peer-checked:bg-primary transition" />
+                  <span className="absolute left-1 top-1 w-4 h-4 bg-background rounded-full transition peer-checked:translate-x-4" />
+                </label>
+              </div>
+              {settings.enableSound && (
+                <>
+                  <input
+                    className="range"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={settings.volume}
+                    onChange={(e) => updateSettings({ volume: Number(e.target.value) })}
+                  />
+                  <div className="text-xs text-center text-muted-foreground">{Math.round((settings.volume ?? 0) * 100)}%</div>
+                </>
               )}
             </div>
           </section>
         </>
       )}
 
-      {activeTab === 'list' && (
-        <>
-          <section className="section">
-            <h2>새 타이머 추가</h2>
-            <div className="field">
-              <label>타이머 라벨</label>
+      {/* Stats inside modal */}
+      {activeTab === "stats" && (
+        <section className="h-[calc(100%-7rem)] p-4 overflow-y-auto space-y-3">
+          <div className="mb-2">
+            <h2 className="text-sm font-semibold text-foreground">통계</h2>
+          </div>
+          <div className="mb-2">
+            <label className="block mb-1 text-xs text-muted-foreground">기간 선택</label>
+            <select
+              className="px-3 py-2 rounded-md bg-background border border-border focus:outline-none focus:ring-2 focus:ring-ring w-full"
+              value={period}
+              onChange={(e) => setPeriod(e.target.value as any)}
+            >
+              <option value="day">일별</option>
+              <option value="week">주별</option>
+              <option value="month">월별</option>
+            </select>
+          </div>
+          <div className="mb-2 flex gap-2">
+            <div className="flex-1">
+              <label className="block mb-1 text-xs text-muted-foreground">시작 시간</label>
               <input
-                type="text"
-                value={timerLabel}
-                onChange={(e) => setTimerLabel(e.target.value)}
-                placeholder={settings.defaultLabel}
+                className="px-3 py-2 rounded-md bg-background border border-border focus:outline-none focus:ring-2 focus:ring-ring w-full"
+                type="number"
+                min={0}
+                max={23}
+                placeholder="시작"
+                value={startHour}
+                onChange={(e) => setStartHour(Number(e.target.value))}
+                title="시작 시간"
               />
             </div>
-            <div className="field">
-              <label>타이머 타입</label>
-              <select
-                value={timerType}
-                onChange={(e) => setTimerType(e.target.value)}
-              >
-                <option value="" disabled>
-                  타이머 타입을 선택하세요
-                </option>
-                {settings.timerTypes.map((t) => (
-                  <option key={t.name} value={t.name}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>지속 시간: {duration}분</label>
+            <div className="flex-1">
+              <label className="block mb-1 text-xs text-muted-foreground">종료 시간</label>
               <input
-                type="range"
-                min="0"
-                max="60"
-                value={duration}
-                onChange={(e) => setDuration(Number(e.target.value))}
+                className="px-3 py-2 rounded-md bg-background border border-border focus:outline-none focus:ring-2 focus:ring-ring w-full"
+                type="number"
+                min={1}
+                max={24}
+                placeholder="종료"
+                value={endHour}
+                onChange={(e) => setEndHour(Number(e.target.value))}
+                title="종료 시간"
               />
             </div>
-            <button className="primary" onClick={handleAddTimer}>
-              + 타이머 추가
-            </button>
-          </section>
+          </div>
+          {(() => {
+            const nowMs = Date.now();
+            const range = { day: 24 * 60 * 60 * 1000, week: 7 * 24 * 60 * 60 * 1000, month: 30 * 24 * 60 * 60 * 1000 }[period];
+            // 기간/시간 필터
+            const filtered = records.filter((r) => {
+              if (!r || typeof r.timestamp !== 'number') return false;
+              if (nowMs - r.timestamp > range) return false;
+              const h = new Date(r.timestamp).getHours();
+              return h >= startHour && h < endHour;
+            });
+            // 유형 기준 합산 (type 없으면 '기타'), 공백 정규화
+            const totalsByType: Record<string, number> = {};
+            filtered.forEach((r) => {
+              const raw = (r as any).type as string | undefined;
+              const key = (raw ? raw.trim() : '') || '기타';
+              totalsByType[key] = (totalsByType[key] || 0) + (r.duration || 0);
+            });
+            const typeEntries = Object.entries(totalsByType).sort((a, b) => b[1] - a[1]);
+            const max = Math.max(1, ...typeEntries.map(([, v]) => v));
+            // 유형 색상 매핑
+            const colorOf = (name: string) => {
+              const n = (name || '').trim();
+              const found = settings.timerTypes.find((t) => (t.name || '').trim() === n);
+              return found?.color || '#22c55e';
+            };
+            return (
+              <div className="space-y-3">
+                <div className="text-xs text-muted-foreground">집중 시간(분)</div>
+                {typeEntries.length === 0 && (
+                  <div className="text-xs text-muted-foreground">표시할 데이터가 없습니다.</div>
+                )}
+                {typeEntries.map(([name, minutes]) => {
+                  const pct = Math.round((minutes / max) * 100);
+                  const color = colorOf(name);
+                  return (
+                    <div key={name} className="w-full">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-foreground">{name}</span>
+                        <span className="text-xs text-muted-foreground">{Math.round(minutes)}m</span>
+                      </div>
+                      <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-3 rounded-full"
+                          style={{ width: `${pct}%`, backgroundColor: color, transition: 'width 300ms ease' }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                {/* 라벨 TOP 10 */}
+                {(() => {
+                  const totalsByLabel: Record<string, number> = {};
+                  filtered.forEach((r) => {
+                    const key = (r.label || '미정').trim();
+                    totalsByLabel[key] = (totalsByLabel[key] || 0) + (r.duration || 0);
+                  });
+                  const labelEntries = Object.entries(totalsByLabel).sort((a, b) => b[1] - a[1]).slice(0, 10);
+                  const maxL = Math.max(1, ...labelEntries.map(([, v]) => v));
+                  return (
+                    <div className="pt-4 space-y-3">
+                      <div className="text-xs text-muted-foreground">라벨 TOP 10</div>
+                      {labelEntries.map(([label, minutes]) => {
+                        const pctL = Math.round((minutes / maxL) * 100);
+                        const typeNameRaw = (filtered.find((r) => (r.label || '').trim() === label)?.type as string) || '';
+                        const color = colorOf(typeNameRaw);
+                        return (
+                          <div key={label} className="w-full">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-medium text-foreground">{label}</span>
+                              <span className="text-xs text-muted-foreground">{Math.round(minutes)}m</span>
+                            </div>
+                            <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className="h-2.5 rounded-full"
+                                style={{ width: `${pctL}%`, backgroundColor: color, transition: 'width 300ms ease' }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            );
+          })()}
+        </section>
+      )}
 
-          <section className="section">
-            <h2>타이머 목록</h2>
-            {timers.length === 0 && (
-              <p>등록된 타이머가 없습니다. 타이머를 추가해보세요.</p>
+      {/* Timer list */}
+      {activeTab === "list" && (
+        <>
+          <section className="h-[calc(100%-7rem)] p-4 overflow-y-auto">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm font-semibold text-foreground">타이머 목록</h2>
+            </div>
+            <h2 className="sr-only">타이머 목록</h2>
+
+            {!adding && (
+              <div className="my-4 ">
+                <button
+                  className="w-full h-12 border-2 border-dashed border-border rounded-md text-sm text-muted-foreground hover:border-primary/50 hover:bg-primary/5"
+                  onClick={() => setAdding(true)}
+                >
+                  + 새 타이머 추가
+                </button>
+              </div>
             )}
-            <ul className="timer-list">
-              {timers.map((t) => (
-                <li key={t.id} className="timer-item">
-                  <span>
-                    {t.label} ({t.type}) - {t.duration}분
-                    {t.running && t.endTime && (
-                      <>
-                        {' '}-
-                        {(() => {
-                          const rem = Math.max(0, t.endTime - now);
-                          const m = Math.floor(rem / 60000)
-                            .toString()
-                            .padStart(2, '0');
-                          const s = Math.floor((rem % 60000) / 1000)
-                            .toString()
-                            .padStart(2, '0');
-                          return ` ${m}:${s}`;
-                        })()}
-                      </>
-                    )}
-                  </span>
-                  <span>
-                    {t.running ? (
-                      <button onClick={() => stopTimer(t.id)}>중지</button>
-                    ) : (
-                      <button onClick={() => startTimer(t.id)}>시작</button>
-                    )}
-                    <button onClick={() => removeTimer(t.id)}>삭제</button>
-                  </span>
-                </li>
-              ))}
-            </ul>
+            {adding && (
+              <div className="my-4 bg-card border border-border rounded-xl p-4 space-y-3">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs text-muted-foreground">
+                    타이머 라벨 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    className="px-3 py-2 rounded-md bg-background border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+                    type="text"
+                    value={timerLabel}
+                    onChange={(e) => setTimerLabel(e.target.value)}
+                    placeholder="타이머 이름을 입력하세요"
+                  />
+                  {!timerLabel.trim() && <span className="text-xs text-red-500 mt-1">타이머 이름을 입력하세요.</span>}
+                  {timerLabel.trim() && timers.some((t) => t.label === timerLabel.trim()) && (
+                    <span className="text-xs text-red-500 mt-1">이미 존재하는 이름입니다.</span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs text-muted-foreground">타입</label>
+                  <select
+                    className="px-3 py-2 rounded-md bg-background border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+                    value={timerType}
+                    onChange={(e) => setTimerType(e.target.value)}
+                  >
+                    <option value="" disabled>
+                      타이머 타입을 선택하세요
+                    </option>
+                    {settings.timerTypes.map((t) => (
+                      <option key={t.name} value={t.name}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs text-muted-foreground">지속 시간: {duration}m</label>
+                  <input
+                    className="range"
+                    type="range"
+                    min="1"
+                    max="60"
+                    value={duration}
+                    onChange={(e) => setDuration(Number(e.target.value))}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground hover:opacity-90 text-sm"
+                    disabled={!timerLabel.trim() || timers.some((t) => t.label === timerLabel.trim())}
+                    onClick={() => {
+                      handleAddTimer();
+                      setAdding(false);
+                    }}
+                  >
+                    추가
+                  </button>
+                  <button
+                    className="inline-flex items-center px-3 py-2 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 text-sm"
+                    onClick={() => setAdding(false)}
+                  >
+                    취소
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {timers.length === 0 && <p className="text-sm text-muted-foreground">등록된 타이머가 없습니다. 아래에서 추가하세요.</p>}
+            <div className="grid grid-cols-2 gap-3">
+              {timers.map((t) => {
+                const rem = Math.max(0, (t.endTime ?? 0) - now);
+                const m = Math.floor(rem / 60000)
+                  .toString()
+                  .padStart(2, "0");
+                const s = Math.floor((rem % 60000) / 1000)
+                  .toString()
+                  .padStart(2, "0");
+                const isActive = !!t.running;
+                return (
+                  <div
+                    key={t.id}
+                    className={`relative bg-card border border-border rounded-xl p-4 transition hover:shadow-soft hover-lift ${
+                      isActive ? "ring-2 ring-primary shadow-medium" : ""
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-foreground mb-1">{isActive ? `${m}:${s}` : `${t.duration}m`}</div>
+                      <div className="text-xs text-muted-foreground mb-2">{t.label}</div>
+                      <div className="flex items-center justify-center gap-2">
+                        {t.running ? (
+                          <button
+                            className="text-xs px-2 py-1 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                            onClick={() => stopTimer(t.id)}
+                          >
+                            중지
+                          </button>
+                        ) : (
+                          <button
+                            className="text-xs px-2 py-1 rounded-md bg-primary text-primary-foreground hover:opacity-90"
+                            onClick={() => startTimer(t.id)}
+                          >
+                            시작
+                          </button>
+                        )}
+                        <button
+                          className="text-xs px-2 py-1 rounded-md bg-destructive text-destructive-foreground hover:opacity-90"
+                          onClick={() => removeTimer(t.id)}
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    </div>
+                    <div className="absolute bottom-0 left-0 w-full h-1 rounded-b-xl" style={{ background: t.color }} />
+                  </div>
+                );
+              })}
+            </div>
           </section>
         </>
       )}
     </div>
   );
 }
-

@@ -3,15 +3,18 @@
   position: fixed;
   width: 150px;
   height: 80px;
-  background: #fff;
-  color: #000;
-  border-radius: 8px;
-  padding: 8px;
+  background: rgba(12, 16, 24, 0.65);
+  color: #f6f7f9;
+  border-radius: 12px;
+  padding: 10px;
   cursor: move;
   box-sizing: border-box;
-  font-family: sans-serif;
-  z-index: 1000;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  z-index: 100000;
   user-select: none;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .floating-timer .close {
@@ -20,13 +23,15 @@
   right: 4px;
   background: none;
   border: none;
-  color: #000;
+  color: #c8d0d8;
   cursor: pointer;
+  font-size: 16px;
 }
 
 .floating-timer .timer-time {
   font-size: 24px;
   text-align: center;
+  letter-spacing: 0.5px;
 }
 
 .floating-timer .timer-dot {
@@ -36,5 +41,5 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15) inset;
 }
-
