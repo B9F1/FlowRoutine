@@ -20,6 +20,19 @@ function App() {
     chrome.runtime.sendMessage({ type: 'getSettings' }, (res: any) => {
       setSettings(res);
     });
+    const listener = (message: any) => {
+      if (message?.type === 'playSound') {
+        try {
+          const audio = new Audio(chrome.runtime.getURL('assets/sounds/bell_01.mp3'));
+          audio.volume = Math.max(0, Math.min(1, Number(message.volume ?? 1)));
+          audio.play().catch(() => {});
+        } catch {}
+      }
+    };
+    chrome.runtime.onMessage.addListener(listener);
+    return () => {
+      try { chrome.runtime.onMessage.removeListener(listener); } catch {}
+    };
   }, []);
 
   const send = (message: any) =>

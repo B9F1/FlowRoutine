@@ -106,7 +106,7 @@ chrome.runtime.onMessage.addListener(
         }
         if (settings.enableSound) {
           chrome.tabs.query(
-            { active: true, currentWindow: true },
+            { active: true, lastFocusedWindow: true },
             (tabs: any[]) => {
               tabs.forEach((tab) => {
                 if (tab.id !== undefined) {
@@ -118,6 +118,8 @@ chrome.runtime.onMessage.addListener(
               });
             }
           );
+          // Also notify extension views (e.g., popup) to play sound if open
+          chrome.runtime.sendMessage({ type: 'playSound', volume: settings.volume });
         }
         sendResponse({ timerData: timers });
         break;

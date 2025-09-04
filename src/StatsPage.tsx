@@ -36,9 +36,7 @@ export default function StatsPage() {
 
   useEffect(() => {
     chrome.storage?.local.get(['stats'], (data: any) => {
-      if (Array.isArray(data?.stats)) {
-        setRecords(data.stats as StatRecord[]);
-      }
+      if (Array.isArray(data?.stats)) setRecords(data.stats as StatRecord[]);
     });
   }, []);
 
@@ -46,7 +44,7 @@ export default function StatsPage() {
     day: 24 * 60 * 60 * 1000,
     week: 7 * 24 * 60 * 60 * 1000,
     month: 30 * 24 * 60 * 60 * 1000,
-  };
+  } as const;
 
   const totals = aggregate(records, rangeMsMap[period], startHour, endHour);
 
@@ -88,7 +86,7 @@ export default function StatsPage() {
           </select>
         </label>
         <label>
-          시작 시간:
+          시작:
           <input
             type="number"
             min={0}
@@ -112,3 +110,4 @@ export default function StatsPage() {
     </div>
   );
 }
+
